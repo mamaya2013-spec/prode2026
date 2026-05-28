@@ -17,6 +17,7 @@ import freekickImg from './assets/soccer_freekick.png';
 import goalkeeperSaveImg from './assets/soccer_goalkeeper_save.png';
 import celebrationImg from './assets/soccer_celebration.png';
 import luxuryDribbleImg from './assets/soccer_luxury_dribble.png';
+import appLogo from './assets/logo.png';
 
 const BG_ACTION_IMAGES = [
   bicycleKickImg, penaltyKickImg, overheadKickImg, skillMoveImg,
@@ -193,12 +194,6 @@ const AppContent: React.FC = () => {
   const getOnboardingAvatarAction = () => {
     if (focusedInput === 'username') return 'dribble';
     if (focusedInput === 'pin') return 'penalty';
-    return 'cycle';
-  };
-
-  const getLoginAvatarAction = () => {
-    if (focusedInput === 'username') return 'skill';
-    if (focusedInput === 'pin') return 'save';
     return 'cycle';
   };
 
@@ -385,11 +380,11 @@ const AppContent: React.FC = () => {
             onMouseMove={handleLoginMouseMove}
             onMouseLeave={handleLoginMouseLeave}
           >
-            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <SoccerActionVisual size={90} action={getLoginAvatarAction()} />
-              <h1 className="app-title" style={{ fontSize: '1.9rem', marginTop: '0.5rem' }}>Mundial 2026</h1>
-              <span className="sport-font" style={{ fontSize: '0.8rem', color: 'var(--color-secondary)', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                Prode Interactivo Premium
+            <div style={{ textAlign: 'center', marginBottom: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <img src={appLogo} alt="La Caprichosa Logo" style={{ width: '130px', height: '130px', borderRadius: '24px', boxShadow: '0 0 20px rgba(0, 212, 255, 0.4)', marginBottom: '0.5rem' }} />
+              <h1 className="app-title sport-font" style={{ fontSize: '2.1rem', marginTop: '0.3rem', letterSpacing: '1px' }}>LA CAPRICHOSA</h1>
+              <span className="sport-font" style={{ fontSize: '0.75rem', color: 'var(--color-secondary)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                Redonda 2026 • Prode Interactivo
               </span>
             </div>
 
@@ -486,10 +481,10 @@ const AppContent: React.FC = () => {
       
       {/* ────────────────── COLUMNA 1: SIDEBAR IZQUIERDA (DESKTOP) ────────────────── */}
       <aside className="desktop-sidebar">
-        <div className="sidebar-logo-box">
-          <SoccerActionVisual size={55} action="bicycle" />
-          <h2 className="app-title" style={{ fontSize: '1.25rem' }}>Mundial 2026</h2>
-          <span className="group-badge" style={{ marginTop: '0.2rem' }}>
+        <div className="sidebar-logo-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', padding: '1rem 0.5rem' }}>
+          <img src={appLogo} alt="Logo" style={{ width: '60px', height: '60px', borderRadius: '12px', boxShadow: '0 0 10px rgba(0, 212, 255, 0.3)' }} />
+          <h2 className="app-title sport-font" style={{ fontSize: '1.15rem', margin: '0.2rem 0 0 0', letterSpacing: '0.5px' }}>LA CAPRICHOSA</h2>
+          <span className="group-badge" style={{ marginTop: '0.1rem' }}>
             {currentGroup?.name}
           </span>
         </div>
@@ -561,10 +556,10 @@ const AppContent: React.FC = () => {
         <div className="bg-soccer-action bg-action-center" style={{ backgroundImage: `url(${BG_ACTION_IMAGES[bgCenterIdx]})`, left: '40%', top: '60%', width: '240px', height: '240px', opacity: 0.04, transition: 'background-image 1.5s ease-in-out' }} />
         
         {/* Cabecera Principal (Mobile Header) */}
-        <header className="app-header">
-          <SoccerActionVisual size={42} action="dribble" />
-          <h1 className="app-title" style={{ fontSize: '1.4rem' }}>Mundial 2026</h1>
-          <span className="group-badge">
+        <header className="app-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+          <img src={appLogo} alt="Logo" style={{ width: '45px', height: '45px', borderRadius: '10px', boxShadow: '0 0 8px rgba(0, 212, 255, 0.3)' }} />
+          <h1 className="app-title sport-font" style={{ fontSize: '1.25rem', margin: '0.1rem 0 0 0', letterSpacing: '0.5px' }}>LA CAPRICHOSA</h1>
+          <span className="group-badge" style={{ marginTop: '0.1rem' }}>
             🏆 {currentGroup?.name || 'Grupo Sin Asignar'}
           </span>
 

@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Prode Mundial 2026',
-        short_name: 'Prode2026',
+        name: 'La Caprichosa - Prode 2026',
+        short_name: 'LaCaprichosa',
         description: 'El mejor Prode interactivo para la Copa del Mundo 2026',
         theme_color: '#080810',
         background_color: '#080810',
