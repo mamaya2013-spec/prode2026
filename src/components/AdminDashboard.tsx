@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useProde } from '../context/ProdeContext';
+import { dataService } from '../services/dataService';
 
 export const AdminDashboard: React.FC = () => {
   const { 
@@ -63,6 +64,13 @@ export const AdminDashboard: React.FC = () => {
       setLiveSimulatedScores(simulated);
     } else {
       setLiveSimulatedScores(null);
+    }
+  };
+
+  const handleHardReset = () => {
+    if (window.confirm('¿Estás seguro de reiniciar toda la base de datos local? Se borrarán todos los grupos, predicciones y usuarios creados.')) {
+      dataService.resetAll();
+      window.location.reload();
     }
   };
 
@@ -266,6 +274,22 @@ export const AdminDashboard: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* 6. REINICIO DE BASE DE DATOS */}
+      <div className="glass-panel" style={{ border: '1px solid hsla(355, 85%, 45%, 0.3)', background: 'hsla(355, 85%, 45%, 0.02)', marginTop: '0.5rem' }}>
+        <h4 className="admin-section-title text-neon-red">⚠️ Restablecimiento Total</h4>
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
+          Elimina todos los datos guardados en LocalStorage (usuarios, predicciones, grupos) y recarga los valores por defecto de la demo.
+        </p>
+        <button 
+          className="btn-premium" 
+          onClick={handleHardReset} 
+          style={{ background: 'var(--color-accent)', borderColor: 'var(--color-accent)' }}
+        >
+          Reiniciar Aplicación (Hard Reset)
+        </button>
+      </div>
+
     </div>
   );
 };

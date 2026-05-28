@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useProde } from '../context/ProdeContext';
 import ShieldSvg from './ShieldSvg';
 import { BADGES } from './Achievements';
+import { TEAMS } from '../data/matches2026';
 
 interface UserPerformanceProps {
   onNavigate?: (tab: 'dashboard' | 'standings' | 'matches' | 'medals' | 'group' | 'admin' | 'chat') => void;
@@ -653,7 +654,7 @@ export const UserPerformance: React.FC<UserPerformanceProps> = ({ onNavigate }) 
                       Tu Favorito 👍
                     </span>
                     <ShieldSvg teamId={favoriteTeamId} size={56} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{favoriteTeamId}</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{TEAMS[favoriteTeamId]?.name || favoriteTeamId}</span>
                     <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
                       {maxWins} victorias pronosticadas
                     </span>
@@ -667,7 +668,7 @@ export const UserPerformance: React.FC<UserPerformanceProps> = ({ onNavigate }) 
                       Menos Fe 👎
                     </span>
                     <ShieldSvg teamId={leastFavoriteTeamId} size={56} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{leastFavoriteTeamId}</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{TEAMS[leastFavoriteTeamId]?.name || leastFavoriteTeamId}</span>
                     <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
                       {maxLosses} derrotas pronosticadas
                     </span>

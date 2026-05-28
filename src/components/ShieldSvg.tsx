@@ -8,7 +8,8 @@ interface ShieldProps {
 }
 
 export const ShieldSvg: React.FC<ShieldProps> = ({ teamId, className = '', size = 52 }) => {
-  const team = TEAMS[teamId] || { id: '???', name: 'Unknown', short: '???', color: 'hsl(0, 0%, 50%)', emoji: '⚽' };
+  const normalizedId = teamId ? teamId.trim().toUpperCase() : '';
+  const team = TEAMS[normalizedId] || { id: '???', name: 'Unknown', short: '???', color: 'hsl(0, 0%, 50%)', emoji: '⚽' };
 
   // Dibuja los patrones y barras de la bandera real en el fondo del escudo
   const renderFlagPattern = (id: string) => {
@@ -483,7 +484,7 @@ export const ShieldSvg: React.FC<ShieldProps> = ({ teamId, className = '', size 
         }}
       >
         <defs>
-          <linearGradient id={`gold-border-${teamId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`gold-border-${normalizedId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="hsl(45, 100%, 75%)" />
             <stop offset="50%" stopColor="hsl(40, 95%, 45%)" />
             <stop offset="100%" stopColor="hsl(45, 100%, 65%)" />
@@ -502,13 +503,13 @@ export const ShieldSvg: React.FC<ShieldProps> = ({ teamId, className = '', size 
           </linearGradient>
           
           {/* ClipPath para recortar la bandera dentro de la silueta del escudo oficial */}
-          <clipPath id={`shield-clip-${teamId}`}>
+          <clipPath id={`shield-clip-${normalizedId}`}>
             <path d="M10,10 C35,5 65,5 90,10 C90,45 80,80 50,95 C20,80 10,45 10,10 Z" />
           </clipPath>
         </defs>
         
         {/* Recorte de la Bandera Nacional */}
-        <g clipPath={`url(#shield-clip-${teamId})`}>
+        <g clipPath={`url(#shield-clip-${normalizedId})`}>
           {renderFlagPattern(team.id)}
         </g>
 
@@ -516,7 +517,7 @@ export const ShieldSvg: React.FC<ShieldProps> = ({ teamId, className = '', size 
         <path 
           d="M10,10 C35,5 65,5 90,10 C90,45 80,80 50,95 C20,80 10,45 10,10 Z" 
           fill="none"
-          stroke={`url(#gold-border-${teamId})`}
+          stroke={`url(#gold-border-${normalizedId})`}
           strokeWidth="4.5"
         />
 
