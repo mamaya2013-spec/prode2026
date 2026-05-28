@@ -1,0 +1,1099 @@
+@import './variables.css';
+
+/* --- CABECERA Y TROFEO DE LA COPA --- */
+.app-header {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  border-bottom: var(--glass-border);
+  background: hsla(240, 45%, 9%, 0.9);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(15px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.trophy-container {
+  width: 50px;
+  height: 50px;
+  margin-bottom: 0.5rem;
+  perspective: 1000px;
+}
+
+.trophy-svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--color-gold);
+}
+
+.app-title {
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  background: var(--gradient-neon);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px hsla(135, 90%, 55%, 0.15);
+}
+
+.group-badge {
+  font-family: var(--font-sporty);
+  font-size: 0.75rem;
+  background: hsla(240, 35%, 20%, 0.8);
+  border: var(--glass-border);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  margin-top: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-secondary);
+  border-color: hsla(60, 95%, 55%, 0.3);
+  box-shadow: 0 0 10px hsla(60, 95%, 55%, 0.1);
+}
+
+/* --- PANTALLAS DE LOGIN / REGISTRO --- */
+.login-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.25rem 2rem;
+  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+  box-shadow: var(--glass-shadow), 0 0 50px rgba(140, 95, 48, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  will-change: transform;
+}
+
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+/* Centrar y limitar el ancho de los campos y botones en login/registro */
+.login-screen .onboarding-form .input-group,
+.login-screen .onboarding-form .btn-premium,
+.login-screen .onboarding-form .text-neon-red,
+.login-screen .btn-premium-centered {
+  width: 100%;
+  max-width: 320px;
+  align-self: center;
+}
+
+.login-screen .input-label {
+  justify-content: center;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  position: relative;
+}
+
+.input-label {
+  font-family: var(--font-sporty);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.premium-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: hsla(240, 35%, 10%, 0.8);
+  border: var(--glass-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.35rem 0.9rem;
+  transition: var(--transition-smooth);
+}
+
+.premium-input-container:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 15px hsla(140, 95%, 48%, 0.25);
+  background: hsla(240, 35%, 13%, 0.95);
+}
+
+.premium-input-icon {
+  width: 20px;
+  height: 20px;
+  fill: var(--color-text-muted);
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
+}
+
+.premium-input-container:focus-within .premium-input-icon {
+  fill: var(--color-primary);
+  filter: drop-shadow(0 0 5px var(--color-primary));
+}
+
+.premium-input-container .input-field {
+  border: none !important;
+  background: transparent !important;
+  padding: 0.75rem 0.5rem;
+  margin: 0;
+  flex: 1;
+  font-size: 1rem;
+  color: var(--color-text-main);
+  font-family: var(--font-sans);
+  width: 100%;
+}
+
+.premium-input-container .input-field:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Slots de PIN interactivos (LED) */
+.pin-slots-container {
+  display: flex;
+  justify-content: center;
+  gap: 1.15rem;
+  margin: 1.25rem 0;
+  position: relative;
+  cursor: pointer;
+}
+
+.pin-slot {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: hsla(240, 35%, 5%, 0.85);
+  border: 2px solid hsla(0, 0%, 100%, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.pin-slot-active {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.5), 0 0 20px hsla(140, 95%, 48%, 0.4);
+  background: hsla(240, 35%, 9%, 0.95);
+  animation: pinPulseActive 1.2s infinite alternate ease-in-out;
+}
+
+.pin-slot-filled {
+  border-color: var(--color-secondary);
+  background: hsla(240, 30%, 12%, 0.9);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3), 0 0 18px hsla(55, 95%, 52%, 0.35);
+}
+
+.pin-slot-placeholder-ball {
+  width: 22px;
+  height: 22px;
+  fill: hsla(0, 0%, 100%, 0.08);
+  color: hsla(0, 0%, 100%, 0.08);
+  transition: all 0.3s ease;
+}
+
+.pin-slot-active .pin-slot-placeholder-ball {
+  fill: hsla(140, 95%, 48%, 0.25);
+  color: hsla(140, 95%, 48%, 0.25);
+  filter: drop-shadow(0 0 5px hsla(140, 95%, 48%, 0.5));
+  transform: scale(1.15) rotate(15deg);
+}
+
+.pin-slot-ball {
+  width: 34px;
+  height: 34px;
+  animation: ballPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes pinPulseActive {
+  0% {
+    transform: scale(1);
+    border-color: var(--color-primary);
+  }
+  100% {
+    transform: scale(1.04);
+    border-color: var(--color-secondary);
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.5), 0 0 22px hsla(55, 95%, 52%, 0.4);
+  }
+}
+
+@keyframes ballPopIn {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+    filter: brightness(2);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+.hidden-pin-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0 !important;
+  cursor: pointer;
+  z-index: 10;
+  -webkit-text-security: disc;
+}
+
+/* Partículas flotantes de fútbol en el fondo */
+.floating-particles-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.floating-particle {
+  position: absolute;
+  bottom: -60px;
+  background: radial-gradient(circle, hsla(140, 95%, 48%, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: floatUp 15s infinite linear;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-particle-ball {
+  width: 50%;
+  height: 50%;
+  opacity: 0.15;
+  fill: var(--color-primary);
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-115vh) translateX(60px) scale(1.3) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* --- TARJETAS DE PARTIDO (MATCH CARDS) --- */
+.matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.match-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.match-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid hsla(0, 0%, 100%, 0.04);
+  padding-bottom: 0.4rem;
+}
+
+.phase-tag {
+  background: hsla(240, 35%, 25%, 0.4);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-family: var(--font-sporty);
+  font-weight: 600;
+}
+
+.countdown-timer {
+  font-family: var(--font-sporty);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.match-teams-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+}
+
+.team-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  width: 35%;
+}
+
+.team-block-right {
+  flex-direction: column;
+}
+
+.team-shield-container {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: hsla(240, 35%, 10%, 0.85);
+  border: var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              box-shadow 0.4s ease, 
+              border-color 0.4s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.team-shield-container:hover {
+  transform: scale(1.2) translateY(-4px) rotate(2deg);
+  box-shadow: 0 12px 24px var(--glow-color, hsla(135, 90%, 55%, 0.55));
+  border-color: var(--glow-color, var(--color-primary));
+  z-index: 10;
+}
+
+.team-shield-svg {
+  width: 88%;
+  height: 88%;
+}
+
+.team-name {
+  font-family: var(--font-sporty);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Controles de marcadores */
+.score-inputs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 30%;
+}
+
+.score-control-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: hsla(240, 35%, 22%, 0.9);
+  border: var(--glass-border);
+  color: var(--color-text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sporty);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--transition-elastic);
+  user-select: none;
+}
+
+.score-control-btn:hover {
+  background: var(--color-secondary);
+  color: var(--color-text-dark);
+  transform: scale(1.12);
+  box-shadow: 0 0 10px hsla(60, 95%, 55%, 0.4);
+}
+
+.score-control-btn:active {
+  transform: scale(0.9);
+}
+
+.score-display-number {
+  width: 26px;
+  text-align: center;
+  font-family: var(--font-sporty);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+/* Estrella del Comodín */
+.joker-star-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  color: hsla(0, 0%, 100%, 0.2);
+  transition: var(--transition-elastic);
+}
+
+.joker-star-btn:hover {
+  transform: scale(1.2) rotate(15deg);
+}
+
+.joker-star-active {
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 8px var(--color-gold));
+  transform: scale(1.1) rotate(0deg);
+}
+
+/* Candado Neón de Bloqueo */
+.locked-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(8, 8, 16, 0.7);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  border-radius: var(--border-radius-md);
+}
+
+.locked-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.locked-icon-svg {
+  width: 32px;
+  height: 32px;
+  fill: var(--color-accent);
+}
+
+.locked-text {
+  font-family: var(--font-sporty);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  letter-spacing: 1px;
+}
+
+/* --- TABLA DE POSICIONES (LEADERBOARD) --- */
+.leaderboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  gap: 0.75rem;
+  position: relative;
+  background: hsla(240, 35%, 13%, 0.7);
+  border-radius: var(--border-radius-md);
+  border: var(--glass-border);
+  transition: var(--transition-smooth);
+}
+
+.leaderboard-row:hover {
+  background: hsla(240, 35%, 17%, 0.85);
+  transform: translateX(4px);
+}
+
+.row-current-user {
+  border-color: var(--color-primary);
+  background: hsla(135, 90%, 55%, 0.05);
+}
+
+.rank-number {
+  width: 25px;
+  font-family: var(--font-sporty);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.rank-first { color: var(--color-gold); }
+.rank-second { color: hsl(0, 0%, 80%); }
+.rank-third { color: hsl(30, 40%, 50%); }
+
+.user-avatar-mini {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bg-stadium-deep);
+  border: 1.5px solid hsla(0, 0%, 100%, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: var(--font-sporty);
+}
+
+.avatar-active {
+  border-color: var(--color-secondary);
+}
+
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-name-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.points-text {
+  font-family: var(--font-sporty);
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+/* Efectos de Fuego para Racha */
+.flame-aura {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: var(--border-radius-md);
+  border: 1.5px solid hsl(25, 100%, 50%);
+  pointer-events: none;
+}
+
+/* --- TARJETAS FIFA-STYLE (PODIO ULTIMATE) --- */
+.podium-section {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 1.25rem;
+  padding: 1.5rem 0.5rem 0.5rem 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.fifa-card {
+  width: 95px;
+  position: relative;
+  border-radius: 8px;
+  background: linear-gradient(135deg, hsl(240, 30%, 15%), hsl(240, 30%, 10%));
+  border: 1.5px solid hsla(0, 0%, 100%, 0.1);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: var(--glass-shadow);
+  transition: var(--transition-elastic);
+  cursor: pointer;
+}
+
+.fifa-card:hover {
+  transform: translateY(-8px) scale(1.08);
+}
+
+.fifa-gold {
+  border-color: var(--color-gold);
+  background: linear-gradient(135deg, hsl(45, 100%, 18%) 0%, hsl(45, 100%, 8%) 100%);
+  box-shadow: 0 10px 25px hsla(45, 100%, 50%, 0.25);
+  width: 105px;
+}
+
+.fifa-badge-crown {
+  position: absolute;
+  top: -14px;
+  font-size: 1.2rem;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+}
+
+.fifa-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid hsla(0, 0%, 100%, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-family: var(--font-sporty);
+}
+
+.fifa-gold .fifa-avatar {
+  border-color: var(--color-gold);
+  background: hsl(45, 100%, 10%);
+  color: var(--color-gold);
+}
+
+.fifa-card-name {
+  font-family: var(--font-sporty);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fifa-card-points {
+  font-family: var(--font-sporty);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin-top: 0.15rem;
+}
+
+/* --- CUADRÍCULA DE MEDALLAS DE FÚTBOL (ACHIEVEMENTS) --- */
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.medal-card {
+  position: relative;
+  background: hsla(240, 35%, 12%, 0.85);
+  border: var(--glass-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.medal-card:hover {
+  background: hsla(240, 35%, 17%, 0.95);
+  transform: translateY(-3px);
+}
+
+.medal-card-unlocked {
+  border-color: var(--color-gold);
+  box-shadow: 0 4px 15px hsla(45, 100%, 50%, 0.15);
+}
+
+.medal-shape-wrapper {
+  width: 50px;
+  height: 50px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.medal-svg {
+  width: 100%;
+  height: 100%;
+  fill: hsla(0, 0%, 100%, 0.15);
+  transition: var(--transition-elastic);
+}
+
+.medal-card-unlocked .medal-svg {
+  fill: var(--color-gold);
+  filter: drop-shadow(0 0 8px var(--color-gold));
+}
+
+.medal-svg-invicto {
+  fill: hsla(0, 0%, 100%, 0.15);
+}
+
+.medal-card-unlocked .medal-svg-invicto {
+  fill: var(--color-blue-neon);
+  filter: drop-shadow(0 0 8px var(--color-blue-neon));
+}
+
+.medal-title {
+  font-family: var(--font-sporty);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.medal-card-unlocked .medal-title {
+  color: var(--color-text-main);
+}
+
+/* POPUP CELEBRACIÓN DE LOGRO */
+.celebration-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(4, 4, 8, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.celebration-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.25rem;
+  max-width: 380px;
+}
+
+.celebration-spark {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, hsla(45, 100%, 50%, 0.25) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.celebration-medal-large {
+  width: 100px;
+  height: 100px;
+  z-index: 1;
+  filter: drop-shadow(0 0 25px var(--color-gold));
+}
+
+/* --- PORTAL DEL ADMINISTRADOR --- */
+.admin-console {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.admin-section-title {
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  border-bottom: 1px solid hsla(60, 95%, 55%, 0.2);
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.simulation-switch-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: hsla(240, 35%, 9%, 0.7);
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-md);
+  border: var(--glass-border);
+}
+
+.simulation-time-inputs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.invite-link-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.invite-link-display {
+  flex: 1;
+  background: hsla(240, 35%, 9%, 0.8);
+  border: var(--glass-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.65rem 0.85rem;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- BANNER DE INSTALACIÓN PWA --- */
+.pwa-banner {
+  position: fixed;
+  bottom: 64px;
+  left: 1rem;
+  right: 1rem;
+  z-index: 99;
+  background: linear-gradient(135deg, hsl(240, 40%, 15%) 0%, hsl(240, 45%, 8%) 100%);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--border-radius-md);
+  padding: 1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  backdrop-filter: blur(10px);
+}
+
+.pwa-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pwa-banner-title {
+  font-family: var(--font-sporty);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-secondary);
+}
+
+.pwa-banner-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.pwa-banner-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+/* --- BARRA DE NAVEGACIÓN INFERIOR MOBILE --- */
+.app-nav {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: hsla(240, 45%, 9%, 0.95);
+  border-top: var(--glass-border);
+  padding: 0.65rem 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  backdrop-filter: blur(15px);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: var(--transition-smooth);
+  width: 20%;
+}
+
+.nav-item-active {
+  color: var(--color-primary);
+}
+
+.nav-icon-svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.nav-text {
+  font-family: var(--font-sporty);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* --- CUADRO DE ELIMINATORIAS (TOURNAMENT BRACKET) --- */
+.bracket-tree-container {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1rem;
+  gap: 0.75rem;
+  background: radial-gradient(circle at center, hsla(240, 45%, 7%, 0.4) 0%, hsla(240, 50%, 3%, 0.9) 100%);
+  min-height: 600px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: var(--glass-border);
+  /* Clave: limitar al ancho del padre */
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bracket-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  min-width: 155px;
+  max-width: 180px;
+  flex-shrink: 0;
+  gap: 0.75rem;
+}
+
+.bracket-column-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-align: center;
+  border-bottom: 1px solid hsla(0, 0%, 100%, 0.05);
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.bracket-node-card {
+  background: hsla(240, 30%, 12%, 0.8);
+  border: 1.5px solid hsla(0, 0%, 100%, 0.05);
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              border-color 0.25s ease, 
+              box-shadow 0.25s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.bracket-node-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 5px 15px hsla(140, 95%, 48%, 0.15);
+  transform: scale(1.04) translateY(-2px);
+  z-index: 5;
+}
+
+.bracket-node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.5rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-family: var(--font-sporty);
+  letter-spacing: 0.5px;
+}
+
+.bracket-node-team-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.bracket-node-team-info {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.bracket-column-center {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  min-width: 180px;
+  max-width: 200px;
+  flex-shrink: 0;
+}
+
+.match-live-pulse {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 10px hsla(328, 100%, 54%, 0.2) !important;
+  animation: bracketLiveGlow 2s infinite ease-in-out;
+}
+
+@keyframes bracketLiveGlow {
+  0%, 100% { border-color: var(--color-accent); }
+  50% { border-color: hsla(328, 100%, 70%, 0.8); }
+}
+
+/* Responsive: en pantallas pequeñas, aún más compacto */
+@media (max-width: 767px) {
+  .bracket-column {
+    min-width: 140px;
+    max-width: 160px;
+  }
+  .bracket-tree-container {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+  .bracket-column-center {
+    min-width: 160px;
+  }
+}
+
+/* Animaciones de la Copa del Mundo en el Cuadro Eliminatorio */
+@keyframes copaFloatGlow {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 10px rgba(255, 191, 0, 0.45)) drop-shadow(0 0 22px rgba(255, 215, 0, 0.25));
+  }
+  50% {
+    transform: translateY(-8px) scale(1.06) rotate(3deg);
+    filter: drop-shadow(0 0 25px rgba(255, 191, 0, 0.85)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.45)) brightness(1.12);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 10px rgba(255, 191, 0, 0.45)) drop-shadow(0 0 22px rgba(255, 215, 0, 0.25));
+  }
+}
+
+.copa-del-mundo-anim {
+  animation: copaFloatGlow 4s ease-in-out infinite;
+  object-fit: contain;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1.4);
+}
+
+.copa-del-mundo-anim:hover {
+  transform: scale(1.18) rotate(-4deg);
+  filter: drop-shadow(0 0 35px rgba(255, 191, 0, 1)) drop-shadow(0 0 60px rgba(255, 215, 0, 0.65)) brightness(1.22) !important;
+  cursor: pointer;
+}

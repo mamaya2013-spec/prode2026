@@ -1,0 +1,804 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { dataService } from '../services/dataService';
+import type { User, Group, Prediction, SystemState, ChatMessage } from '../services/dataService';
+import type { Match } from '../data/matches2026';
+import { liveFeedService } from '../services/liveFeedService';
+
+interface ProdeContextType {
+  currentUser: User | null;
+  currentGroup: Group | null;
+  users: User[];
+  groups: Group[];
+  matches: Match[];
+  predictions: Prediction[];
+  chatMessages: ChatMessage[];
+  systemState: SystemState;
+  login: (username: string, pin: string) => boolean;
+  logout: () => void;
+  registerWithInvite: (username: string, pin: string, inviteToken: string) => boolean;
+  saveUserPrediction: (matchId: string, scoreA: number, scoreB: number, isJoker: boolean) => { success: boolean; error?: string; animation?: boolean };
+  updateMatchResult: (matchId: string, scoreA: number, scoreB: number, status: 'pending' | 'live' | 'finished') => void;
+  getSystemTime: () => Date;
+  updateSystemTimeOffset: (minutes: number) => void;
+  toggleAdminMode: () => void;
+  generateInviteLink: (groupId: string) => string;
+  createGroup: (name: string, inviteToken: string) => Group;
+  sendChatMessage: (message: string) => void;
+  recentAchievementUnlocked: { title: string; desc: string; icon: string } | null;
+  clearRecentAchievement: () => void;
+  liveSimulatedScores: Record<string, { scoreA: number; scoreB: number }> | null;
+  setLiveSimulatedScores: React.Dispatch<React.SetStateAction<Record<string, { scoreA: number; scoreB: number }> | null>>;
+}
+
+const TEAM_CONTINENTS: Record<string, string> = {
+  // America
+  MEX: 'America', ECU: 'America', CAN: 'America', COL: 'America',
+  USA: 'America', URU: 'America', ARG: 'America', BRA: 'America',
+  PER: 'America', CRC: 'America', PAN: 'America', JAM: 'America', CHI: 'America',
+  // Europa
+  POL: 'Europa', SWE: 'Europa', DEN: 'Europa', FRA: 'Europa',
+  SUI: 'Europa', GER: 'Europa', ESP: 'Europa', CRO: 'Europa',
+  BEL: 'Europa', POR: 'Europa', ENG: 'Europa', NED: 'Europa',
+  ITA: 'Europa', UKR: 'Europa', AUT: 'Europa', TUR: 'Europa', WAL: 'Europa',
+  // Asia
+  KSA: 'Asia', KOR: 'Asia', JPN: 'Asia', IRN: 'Asia', IRQ: 'Asia', QAT: 'Asia',
+  // Africa
+  CMR: 'Africa', SEN: 'Africa', MAR: 'Africa', GHA: 'Africa',
+  TUN: 'Africa', ALG: 'Africa', NGA: 'Africa', EGY: 'Africa', CIV: 'Africa', RSA: 'Africa',
+  // Oceania
+  NZL: 'Oceania', AUS: 'Oceania'
+};
+
+const ProdeContext = createContext<ProdeContextType | undefined>(undefined);
+
+export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [systemState, setSystemState] = useState<SystemState>({ simulatedTimeOffset: 0, isAdmin: false });
+  const [recentAchievementUnlocked, setRecentAchievementUnlocked] = useState<{ title: string; desc: string; icon: string } | null>(null);
+  const [liveSimulatedScores, setLiveSimulatedScores] = useState<Record<string, { scoreA: number; scoreB: number }> | null>(null);
+
+  // Cargar base de datos inicial al montar
+  useEffect(() => {
+    dataService.initDatabase();
+    setUsers(dataService.getUsers());
+    setGroups(dataService.getGroups());
+    setPredictions(dataService.getPredictions());
+    setChatMessages(dataService.getChatMessages());
+    
+    const savedState = dataService.getSystemState();
+    setSystemState(savedState);
+
+    // Inicializar partidos evaluando con la hora actual
+    const savedMatches = dataService.getMatches();
+    const systemTime = new Date(new Date().getTime() + savedState.simulatedTimeOffset);
+    const updated = savedMatches.map(m => {
+      // Si el admin cargó un resultado fijo, lo respeta. De lo contrario, calcula el feed
+      if (m.status === 'finished' && m.scoreA !== undefined) return m;
+
+      const live = liveFeedService.calculateLiveMatchState(m, systemTime);
+      if (live.status !== m.status || live.currentScoreA !== m.scoreA || live.currentScoreB !== m.scoreB) {
+        return {
+          ...m,
+          status: live.status,
+          scoreA: live.status !== 'pending' ? live.currentScoreA : undefined,
+          scoreB: live.status !== 'pending' ? live.currentScoreB : undefined
+        };
+      }
+      return m;
+    });
+
+    setMatches(updated);
+    dataService.saveMatches(updated);
+
+    // Auto-login de sesión
+    const savedUserId = sessionStorage.getItem('prode_logged_user_id');
+    if (savedUserId) {
+      const allUsers = dataService.getUsers();
+      const user = allUsers.find(u => u.id === savedUserId);
+      if (user) {
+        setCurrentUser(user);
+      }
+    }
+  }, []);
+
+  const getSystemTime = () => {
+    const realTime = new Date();
+    return new Date(realTime.getTime() + systemState.simulatedTimeOffset);
+  };
+
+  // Hilo de intervalo para actualizar marcadores automáticos en vivo y alertas de goles
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const systemTime = getSystemTime();
+      let matchesUpdated = false;
+      let pointsNeedRecalculate = false;
+      let lastMatchFinishedId = undefined;
+
+      const updated = matches.map(m => {
+        // Respetar resultados manuales guardados por el admin
+        if (m.status === 'finished' && m.scoreA !== undefined && !matches.find(orig => orig.id === m.id && orig.status === 'live')) {
+          return m;
+        }
+
+        const live = liveFeedService.calculateLiveMatchState(m, systemTime);
+        
+        // Evaluar cambios relevantes
+        if (live.status !== m.status || live.currentScoreA !== m.scoreA || live.currentScoreB !== m.scoreB) {
+          matchesUpdated = true;
+
+          // Si acaba de finalizar de forma automática
+          if (live.status === 'finished' && m.status !== 'finished') {
+            pointsNeedRecalculate = true;
+            lastMatchFinishedId = m.id;
+          }
+
+          // Si acaba de ocurrir un gol en este tick, inyectar alerta en el chat
+          if (live.isGoalJustScored && live.goalMessage && currentUser) {
+            injectSystemChatMessage(currentUser.groupId, live.goalMessage);
+          }
+
+          return {
+            ...m,
+            status: live.status,
+            scoreA: live.status !== 'pending' ? live.currentScoreA : undefined,
+            scoreB: live.status !== 'pending' ? live.currentScoreB : undefined
+          };
+        }
+        return m;
+      });
+
+      if (matchesUpdated) {
+        setMatches(updated);
+        dataService.saveMatches(updated);
+
+        if (pointsNeedRecalculate) {
+          recalculatePoints(updated, lastMatchFinishedId);
+        }
+      }
+    }, 10000); // Polling cada 10 segundos
+
+    return () => clearInterval(interval);
+  }, [matches, currentUser, systemState.simulatedTimeOffset]);
+
+  const updateSystemTimeOffset = (minutes: number) => {
+    const offsetMs = minutes * 60 * 1000;
+    const newState = { ...systemState, simulatedTimeOffset: offsetMs };
+    setSystemState(newState);
+    dataService.saveSystemState(newState);
+
+    // Al viajar en el tiempo, actualiza masivamente todos los estados de los partidos
+    const savedMatches = dataService.getMatches();
+    const systemTime = new Date(new Date().getTime() + offsetMs);
+    let lastFinishedId = undefined;
+
+    const updated = savedMatches.map(m => {
+      const live = liveFeedService.calculateLiveMatchState(m, systemTime);
+      if (live.status !== m.status || live.currentScoreA !== m.scoreA || live.currentScoreB !== m.scoreB) {
+        if (live.status === 'finished' && m.status !== 'finished') {
+          lastFinishedId = m.id;
+        }
+        return {
+          ...m,
+          status: live.status,
+          scoreA: live.status !== 'pending' ? live.currentScoreA : undefined,
+          scoreB: live.status !== 'pending' ? live.currentScoreB : undefined
+        };
+      }
+      return m;
+    });
+
+    setMatches(updated);
+    dataService.saveMatches(updated);
+    
+    // Recalcula los puntos inmediatamente para toda la base de datos
+    recalculatePoints(updated, lastFinishedId);
+  };
+
+  const toggleAdminMode = () => {
+    const newState = { ...systemState, isAdmin: !systemState.isAdmin };
+    setSystemState(newState);
+    dataService.saveSystemState(newState);
+  };
+
+  const login = (username: string, pin: string): boolean => {
+    const foundUser = users.find(
+      u => u.name.toLowerCase() === username.toLowerCase() && u.pin === pin
+    );
+    if (foundUser) {
+      setCurrentUser(foundUser);
+      sessionStorage.setItem('prode_logged_user_id', foundUser.id);
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    sessionStorage.removeItem('prode_logged_user_id');
+  };
+
+  const registerWithInvite = (username: string, pin: string, inviteToken: string): boolean => {
+    const targetGroup = groups.find(g => g.inviteToken === inviteToken);
+    if (!targetGroup) return false;
+
+    const nameTaken = users.some(
+      u => u.name.toLowerCase() === username.toLowerCase() && u.groupId === targetGroup.id
+    );
+    if (nameTaken) return false;
+
+    const newUser: User = {
+      id: `U-${Date.now()}`,
+      name: username,
+      pin: pin,
+      groupId: targetGroup.id,
+      points: 0,
+      streak: 0,
+      achievements: [],
+      jokersUsedGroup: 0,
+      jokersUsedFinal: 0
+    };
+
+    const newUsersList = [...users, newUser];
+    setUsers(newUsersList);
+    dataService.saveUsers(newUsersList);
+
+    setCurrentUser(newUser);
+    sessionStorage.setItem('prode_logged_user_id', newUser.id);
+
+    injectSystemChatMessage(targetGroup.id, `👋 ¡Démosle la bienvenida a ${username} que se acaba de unir al prode del grupo! ⚽🔥`);
+
+    return true;
+  };
+
+  const generateInviteLink = (groupId: string): string => {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return '';
+    return `${window.location.origin}${window.location.pathname}?invite=${group.inviteToken}`;
+  };
+
+  const createGroup = (name: string, inviteToken: string): Group => {
+    const newGroup: Group = {
+      id: `G-${Date.now()}`,
+      name,
+      inviteToken: inviteToken || `invite-${Math.random().toString(36).substring(2, 7)}`
+    };
+    const updatedGroups = [...groups, newGroup];
+    setGroups(updatedGroups);
+    dataService.saveGroups(updatedGroups);
+    return newGroup;
+  };
+
+  const injectSystemChatMessage = (groupId: string, message: string) => {
+    const newMsg: ChatMessage = {
+      id: `C-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      groupId,
+      userId: 'system',
+      userName: 'FIFA 2026',
+      message,
+      timestamp: getSystemTime().toISOString(),
+      type: 'system'
+    };
+
+    setChatMessages(prev => {
+      const updated = [...prev, newMsg];
+      dataService.saveChatMessages(updated);
+      return updated;
+    });
+  };
+
+  const sendChatMessage = (message: string) => {
+    if (!currentUser) return;
+    const newMsg: ChatMessage = {
+      id: `C-${Date.now()}`,
+      groupId: currentUser.groupId,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      message,
+      timestamp: getSystemTime().toISOString(),
+      type: 'user'
+    };
+
+    setChatMessages(prev => {
+      const updated = [...prev, newMsg];
+      dataService.saveChatMessages(updated);
+      return updated;
+    });
+  };
+
+  // Guardar o modificar predicción
+  const saveUserPrediction = (
+    matchId: string,
+    scoreA: number,
+    scoreB: number,
+    isJoker: boolean
+  ): { success: boolean; error?: string; animation?: boolean } => {
+    if (!currentUser) return { success: false, error: 'Inicia sesión para guardar tu predicción.' };
+
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return { success: false, error: 'Partido no encontrado.' };
+
+    const matchKickoff = new Date(match.date).getTime();
+    const systemTime = getSystemTime().getTime();
+    const oneHourInMs = 60 * 60 * 1000;
+
+    if (matchKickoff - systemTime <= oneHourInMs) {
+      return { success: false, error: 'La predicción está bloqueada. Cerró 1 hora antes del partido.' };
+    }
+
+    const isFinalPhase = ['Dieciseisavos', 'Octavos', 'Cuartos', 'Semifinal', 'Tercer Puesto', 'Final'].includes(match.phase);
+    
+    if (isJoker) {
+      if (isFinalPhase && currentUser.jokersUsedFinal >= 1) {
+        const existingPred = predictions.find(p => p.userId === currentUser.id && p.matchId === matchId);
+        if (!existingPred || !existingPred.isJoker) {
+          return { success: false, error: 'Ya usaste tu comodín para la fase final.' };
+        }
+      } else if (!isFinalPhase && currentUser.jokersUsedGroup >= 1) {
+        const existingPred = predictions.find(p => p.userId === currentUser.id && p.matchId === matchId);
+        if (!existingPred || !existingPred.isJoker) {
+          return { success: false, error: 'Ya usaste tu comodín para la fase de grupos.' };
+        }
+      }
+    }
+
+    const updatedPredictions = [...predictions];
+    const predictionIdx = updatedPredictions.findIndex(
+      p => p.userId === currentUser.id && p.matchId === matchId
+    );
+
+    let predWasJoker = false;
+    if (predictionIdx >= 0) {
+      predWasJoker = updatedPredictions[predictionIdx].isJoker;
+      updatedPredictions[predictionIdx] = {
+        ...updatedPredictions[predictionIdx],
+        predictedScoreA: scoreA,
+        predictedScoreB: scoreB,
+        isJoker,
+        timestamp: getSystemTime().toISOString()
+      };
+    } else {
+      updatedPredictions.push({
+        id: `P-${Date.now()}`,
+        userId: currentUser.id,
+        matchId,
+        predictedScoreA: scoreA,
+        predictedScoreB: scoreB,
+        isJoker,
+        timestamp: getSystemTime().toISOString()
+      });
+    }
+
+    const updatedUsers = users.map(u => {
+      if (u.id === currentUser.id) {
+        let jokersUsedGroup = u.jokersUsedGroup;
+        let jokersUsedFinal = u.jokersUsedFinal;
+
+        if (isJoker && !predWasJoker) {
+          if (isFinalPhase) jokersUsedFinal += 1;
+          else jokersUsedGroup += 1;
+        } else if (!isJoker && predWasJoker) {
+          if (isFinalPhase) jokersUsedFinal = Math.max(0, jokersUsedFinal - 1);
+          else jokersUsedGroup = Math.max(0, jokersUsedGroup - 1);
+        }
+
+        const newAchievements = [...u.achievements];
+        if (isJoker && !newAchievements.includes('apuestaTodo')) {
+          newAchievements.push('apuestaTodo');
+          setRecentAchievementUnlocked({
+            title: 'All-In',
+            desc: 'Usaste tu primer comodín en un partido.',
+            icon: 'star'
+          });
+        }
+
+        const timeDiff = matchKickoff - systemTime;
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        if (timeDiff >= twentyFourHours && !newAchievements.includes('fiel')) {
+          newAchievements.push('fiel');
+          setRecentAchievementUnlocked({
+            title: 'Ticket Holográfico',
+            desc: 'Guardaste una predicción con más de 24 horas de antelación.',
+            icon: 'ticket'
+          });
+        }
+
+        const updated = { ...u, jokersUsedGroup, jokersUsedFinal, achievements: newAchievements };
+
+        setCurrentUser(updated);
+        return updated;
+      }
+      return u;
+    });
+
+    setPredictions(updatedPredictions);
+    setUsers(updatedUsers);
+    dataService.savePredictions(updatedPredictions);
+    dataService.saveUsers(updatedUsers);
+
+    return { success: true, animation: true };
+  };
+
+  const recalculatePoints = (updatedMatchesList: Match[], triggerMatchId?: string) => {
+    const allPredictions = dataService.getPredictions();
+    const allUsers = dataService.getUsers();
+
+    const previousLeaders: Record<string, string> = {};
+    const groupIds = Array.from(new Set(allUsers.map(u => u.groupId)));
+    
+    groupIds.forEach(gId => {
+      const sorted = [...allUsers].filter(u => u.groupId === gId).sort((a,b) => b.points - a.points);
+      if (sorted.length > 0) {
+        previousLeaders[gId] = sorted[0].id;
+      }
+    });
+
+    const finishedMatches = [...updatedMatchesList]
+      .filter(m => m.status === 'finished')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const recalculatedUsers = allUsers.map(user => {
+      let totalPoints = 0;
+      let currentStreak = 0;
+      let maxStreak = 0;
+      let exactMatchesCount = 0;
+      let winnerCorrectCount = 0;
+      let hasCeroACero = false;
+      let hasMatagigantes = false;
+      let hasFrancotirador = false;
+      let hasDobleComodin = false;
+      const correctContinents = new Set<string>();
+
+      finishedMatches.forEach(match => {
+        const pred = allPredictions.find(p => p.userId === user.id && p.matchId === match.id);
+        if (!pred) {
+          currentStreak = 0;
+          return;
+        }
+
+        const realA = match.scoreA!;
+        const realB = match.scoreB!;
+        const predA = pred.predictedScoreA;
+        const predB = pred.predictedScoreB;
+
+        const isExact = realA === predA && realB === predB;
+        const isWinnerCorrect =
+          (realA > realB && predA > predB) ||
+          (realA < realB && predA < predB) ||
+          (realA === realB && predA === predB);
+
+        let pointsEarned = 0;
+
+        if (isExact) {
+          pointsEarned = 3;
+          exactMatchesCount++;
+        } else if (isWinnerCorrect) {
+          pointsEarned = 1;
+        }
+
+        if (pred.isJoker) {
+          pointsEarned *= 2;
+        }
+
+        if (isWinnerCorrect) {
+          winnerCorrectCount++;
+          const winningTeam = realA > realB ? match.teamA : (realA < realB ? match.teamB : null);
+          if (winningTeam) {
+            const continent = TEAM_CONTINENTS[winningTeam];
+            if (continent) {
+              correctContinents.add(continent);
+            }
+          }
+        }
+
+        if (isExact && realA === 0 && realB === 0) {
+          hasCeroACero = true;
+        }
+
+        if (pred.isJoker && pointsEarned > 0) {
+          hasDobleComodin = true;
+        }
+
+        if (isExact && (realA + realB >= 4)) {
+          hasFrancotirador = true;
+        }
+
+        const underdogWins = 
+          (match.teamA === 'KSA' && realA > realB && ['ARG', 'FRA', 'BRA', 'GER', 'ESP'].includes(match.teamB)) ||
+          (match.teamB === 'KSA' && realB > realA && ['ARG', 'FRA', 'BRA', 'GER', 'ESP'].includes(match.teamA)) ||
+          (match.teamA === 'JAM' && realA > realB && ['ARG', 'FRA', 'BRA', 'GER', 'ESP'].includes(match.teamB)) ||
+          (match.teamB === 'JAM' && realB > realA && ['ARG', 'FRA', 'BRA', 'GER', 'ESP'].includes(match.teamA));
+        
+        if (underdogWins && isWinnerCorrect) {
+          hasMatagigantes = true;
+        }
+
+        if (pointsEarned > 0) {
+          if (currentStreak >= 3) {
+            pointsEarned += 1;
+          }
+          currentStreak++;
+          if (currentStreak > maxStreak) maxStreak = currentStreak;
+        } else {
+          currentStreak = 0;
+        }
+
+        totalPoints += pointsEarned;
+      });
+
+      const achievements = [...user.achievements];
+      
+      // primerGol
+      if (winnerCorrectCount >= 1 && !achievements.includes('primerGol')) {
+        achievements.push('primerGol');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Primer Gol',
+            desc: 'Acertaste el ganador de un partido por primera vez.',
+            icon: 'net'
+          });
+        }
+      }
+
+      // ceroACero
+      if (hasCeroACero && !achievements.includes('ceroACero')) {
+        achievements.push('ceroACero');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Muro Infranqueable',
+            desc: 'Predeciste correctamente un empate 0-0.',
+            icon: 'gloves'
+          });
+        }
+      }
+
+      // invicto
+      if (maxStreak >= 3 && !achievements.includes('invicto')) {
+        achievements.push('invicto');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Silbato de Oro',
+            desc: 'Encadenaste una Racha de Fuego de 3 partidos sumando puntos.',
+            icon: 'whistle'
+          });
+        }
+      }
+
+      // francotirador
+      if (hasFrancotirador && !achievements.includes('francotirador')) {
+        achievements.push('francotirador');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Botín de Oro',
+            desc: 'Acertaste un resultado exacto con 4 o más goles.',
+            icon: 'boot'
+          });
+        }
+      }
+
+      // matagigantes
+      if (hasMatagigantes && !achievements.includes('matagigantes')) {
+        achievements.push('matagigantes');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Escudo del León',
+            desc: 'Predeciste la victoria de un equipo débil frente a una potencia.',
+            icon: 'shield'
+          });
+        }
+      }
+
+      // goleador
+      if (winnerCorrectCount >= 5 && !achievements.includes('goleador')) {
+        achievements.push('goleador');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Máquina de Goles',
+            desc: 'Acertaste 5 ganadores correctos en total.',
+            icon: 'rocket'
+          });
+        }
+      }
+
+      // dobleComodin
+      if (hasDobleComodin && !achievements.includes('dobleComodin')) {
+        achievements.push('dobleComodin');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Jugador de Póker',
+            desc: 'Ganaste puntos dobles con un comodín activo.',
+            icon: 'lightning'
+          });
+        }
+      }
+
+      // profeta
+      if (exactMatchesCount >= 3 && !achievements.includes('profeta')) {
+        achievements.push('profeta');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Pelota de Cristal',
+            desc: 'Lograste 3 aciertos exactos de marcadores en el prode.',
+            icon: 'crystal'
+          });
+        }
+      }
+
+      // rachaFuego
+      if (maxStreak >= 5 && !achievements.includes('rachaFuego')) {
+        achievements.push('rachaFuego');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Racha Infernal',
+            desc: 'Encadenaste una racha de 5 o más partidos acertando.',
+            icon: 'flame'
+          });
+        }
+      }
+
+      // globalista
+      if (correctContinents.size >= 4 && !achievements.includes('globalista')) {
+        achievements.push('globalista');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Trotamundos',
+            desc: 'Acertaste ganadores de 4 continentes diferentes.',
+            icon: 'globe'
+          });
+        }
+      }
+
+      // leyenda
+      if (exactMatchesCount >= 5 && !achievements.includes('leyenda')) {
+        achievements.push('leyenda');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Leyenda Absoluta',
+            desc: 'Acertaste 5 marcadores exactos en el prode.',
+            icon: 'crown'
+          });
+        }
+      }
+
+      // diamante
+      if (totalPoints >= 30 && !achievements.includes('diamante')) {
+        achievements.push('diamante');
+        if (currentUser && user.id === currentUser.id) {
+          setRecentAchievementUnlocked({
+            title: 'Diamante Eterno',
+            desc: 'Acumulaste 30 o más puntos en el prode.',
+            icon: 'diamond'
+          });
+        }
+      }
+
+      return {
+        ...user,
+        points: totalPoints,
+        streak: currentStreak,
+        achievements
+      };
+    });
+
+    const finalRecalculatedUsers = groupIds.flatMap(gId => {
+      const sortedInGroup = recalculatedUsers.filter(u => u.groupId === gId).sort((a, b) => b.points - a.points);
+      return sortedInGroup.map((u, index) => {
+        const achievements = [...u.achievements];
+        if (index < 3 && !achievements.includes('top3')) {
+          achievements.push('top3');
+          if (currentUser && u.id === currentUser.id) {
+            setRecentAchievementUnlocked({
+              title: 'Podio Mundial',
+              desc: 'Alcanzaste el Top 3 de tu grupo en el leaderboard.',
+              icon: 'medal'
+            });
+          }
+        }
+        const updatedUser = {
+          ...u,
+          achievements
+        };
+
+        if (currentUser && u.id === currentUser.id) {
+          setCurrentUser(prev => prev ? { ...prev, points: updatedUser.points, streak: updatedUser.streak, achievements: updatedUser.achievements } : null);
+        }
+        return updatedUser;
+      });
+    });
+
+    setUsers(finalRecalculatedUsers);
+    dataService.saveUsers(finalRecalculatedUsers);
+
+    if (triggerMatchId) {
+      const match = updatedMatchesList.find(m => m.id === triggerMatchId);
+      if (match) {
+        finalRecalculatedUsers.forEach(u => {
+          const pred = allPredictions.find(p => p.userId === u.id && p.matchId === match.id);
+          if (pred && pred.predictedScoreA === match.scoreA && pred.predictedScoreB === match.scoreB) {
+            injectSystemChatMessage(u.groupId, `🎯 ¡${u.name} clavó el resultado exacto en ${match.teamA} ${match.scoreA}-${match.scoreB} ${match.teamB}! Se lleva +${pred.isJoker ? 6 : 3} Puntos. 🔥`);
+          }
+        });
+
+        groupIds.forEach(gId => {
+          const prevLeaderId = previousLeaders[gId];
+          const sortedNew = [...finalRecalculatedUsers].filter(u => u.groupId === gId).sort((a,b) => b.points - a.points);
+          if (sortedNew.length > 0 && prevLeaderId && sortedNew[0].id !== prevLeaderId) {
+            const oldLeader = finalRecalculatedUsers.find(u => u.id === prevLeaderId);
+            injectSystemChatMessage(gId, `🚨 ¡${sortedNew[0].name} le acaba de arrebatar el trono a ${oldLeader?.name || 'su rival'} en la tabla de posiciones! 👑🔥`);
+          }
+        });
+      }
+    }
+  };
+
+  const updateMatchResult = (
+    matchId: string,
+    scoreA: number,
+    scoreB: number,
+    status: 'pending' | 'live' | 'finished'
+  ) => {
+    const updatedMatches = matches.map(m => {
+      if (m.id === matchId) {
+        return { ...m, scoreA, scoreB, status };
+      }
+      return m;
+    });
+
+    setMatches(updatedMatches);
+    dataService.saveMatches(updatedMatches);
+
+    if (status === 'finished') {
+      recalculatePoints(updatedMatches, matchId);
+    }
+  };
+
+  const clearRecentAchievement = () => {
+    setRecentAchievementUnlocked(null);
+  };
+
+  const currentGroup = currentUser
+    ? groups.find(g => g.id === currentUser.groupId) || null
+    : null;
+
+  return (
+    <ProdeContext.Provider
+      value={{
+        currentUser,
+        currentGroup,
+        users,
+        groups,
+        matches,
+        predictions,
+        chatMessages,
+        systemState,
+        login,
+        logout,
+        registerWithInvite,
+        saveUserPrediction,
+        updateMatchResult,
+        getSystemTime,
+        updateSystemTimeOffset,
+        toggleAdminMode,
+        generateInviteLink,
+        createGroup,
+        sendChatMessage,
+        recentAchievementUnlocked,
+        clearRecentAchievement,
+        liveSimulatedScores,
+        setLiveSimulatedScores
+      }}
+    >
+      {children}
+    </ProdeContext.Provider>
+  );
+};
+
+export const useProde = () => {
+  const context = useContext(ProdeContext);
+  if (!context) throw new Error('useProde debe usarse dentro de un ProdeProvider');
+  return context;
+};

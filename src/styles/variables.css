@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Paleta de Colores Oficial FIFA World Cup 2026 */
+  --bg-stadium-deep: hsl(240, 50%, 4%);       /* Azul Medianoche Ultra Profundo */
+  --bg-stadium-dark: hsl(240, 45%, 8%);       /* Fondo Secundario Estadio */
+  --bg-stadium-card: hsla(240, 30%, 12%, 0.8); /* Vidrio esmerilado de tarjetas */
+  --bg-stadium-card-hover: hsla(240, 30%, 18%, 0.9);
+  --bg-stadium-glass-glow: hsla(140, 95%, 48%, 0.04);
+
+  /* Colores de Acento Oficiales FIFA 2026 */
+  --color-primary: hsl(140, 95%, 48%);       /* Verde FIFA Campeón */
+  --color-secondary: hsl(55, 95%, 52%);      /* Amarillo/Oro de Pelota */
+  --color-accent: hsl(328, 100%, 54%);       /* Rosa Energético / Bloqueado */
+  --color-gold: hsl(45, 90%, 52%);          /* Oro de la Copa FIFA */
+  --color-blue-neon: hsl(200, 100%, 50%);    /* Azul Eléctrico FIFA */
+  --color-purple-neon: hsl(285, 90%, 50%);   /* Púrpura de reflectores */
+
+  /* Colores de Texto */
+  --color-text-main: hsl(0, 0%, 96%);
+  --color-text-muted: hsl(240, 12%, 75%);
+  --color-text-dark: hsl(240, 50%, 3%);
+
+  /* Sombras y Vidrio templado */
+  --glass-border: 1px solid hsla(0, 0%, 100%, 0.07);
+  --glass-border-glow: 1px solid hsla(140, 95%, 48%, 0.35);
+  --glass-shadow: 0 16px 45px 0 rgba(0, 0, 0, 0.7);
+  --glass-shadow-primary: 0 0 25px hsla(140, 95%, 48%, 0.25);
+  --glass-shadow-accent: 0 0 25px hsla(328, 100%, 54%, 0.25);
+
+  /* Gradientes Oficiales FIFA 2026 */
+  --gradient-stadium: linear-gradient(185deg, var(--bg-stadium-deep), var(--bg-stadium-dark));
+  --gradient-gold: linear-gradient(135deg, hsl(45, 100%, 58%), hsl(35, 100%, 38%));
+  --gradient-neon: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  --gradient-locked: linear-gradient(135deg, hsl(328, 100%, 54%), hsl(300, 100%, 35%));
+  --gradient-holographic: linear-gradient(120deg, hsla(200, 100%, 50%, 0.8), hsla(285, 90%, 50%, 0.8), hsla(328, 100%, 54%, 0.8));
+  --gradient-fifa-bar: linear-gradient(90deg, var(--color-primary), var(--color-purple-neon), var(--color-accent));
+
+  /* Tipografía */
+  --font-sporty: 'Outfit', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+
+  /* Bordes y Transiciones */
+  --border-radius-sm: 8px;
+  --border-radius-md: 16px;
+  --border-radius-lg: 24px;
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-elastic: all 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+}
+
