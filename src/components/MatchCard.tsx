@@ -194,30 +194,45 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   const teamA = TEAMS[match.teamA];
   const teamB = TEAMS[match.teamB];
 
+  const matchDateObj = new Date(match.date);
+  const formattedDateTime = new Intl.DateTimeFormat('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(matchDateObj).replace(',', ' -');
+
   return (
     <div className={`glass-panel match-card ${isLocked ? 'match-locked-card' : ''}`}>
       
       {/* Cabecera del Partido */}
-      <div className="match-info-header">
-        <span className="phase-tag">{match.phase}</span>
-        <span>{match.stadium}</span>
-        <span className={`countdown-timer ${isLocked ? (currentMatchStatus === 'live' ? 'text-neon-green' : 'text-neon-red') : 'text-neon-green'}`}>
-          {isLocked ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-              <svg className="locked-icon-svg" style={{ width: '12px', height: '12px', fill: currentMatchStatus === 'live' ? 'var(--color-primary)' : 'var(--color-accent)' }} viewBox="0 0 24 24">
-                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-              </svg>
-              {timeLeftStr}
-            </span>
-          ) : (
-            <>
-              <svg style={{ width: '12px', height: '12px', fill: 'currentColor' }} viewBox="0 0 24 24">
-                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm1 16h-2v-6h2v6zm0-8h-2V8h2v2z"/>
-              </svg>
-              {timeLeftStr}
-            </>
-          )}
-        </span>
+      <div className="match-info-header" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <span className="phase-tag">{match.phase}</span>
+          <span className={`countdown-timer ${isLocked ? (currentMatchStatus === 'live' ? 'text-neon-green' : 'text-neon-red') : 'text-neon-green'}`}>
+            {isLocked ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                <svg className="locked-icon-svg" style={{ width: '12px', height: '12px', fill: currentMatchStatus === 'live' ? 'var(--color-primary)' : 'var(--color-accent)' }} viewBox="0 0 24 24">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+                {timeLeftStr}
+              </span>
+            ) : (
+              <>
+                <svg style={{ width: '12px', height: '12px', fill: 'currentColor' }} viewBox="0 0 24 24">
+                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm1 16h-2v-6h2v6zm0-8h-2V8h2v2z"/>
+                </svg>
+                {timeLeftStr}
+              </>
+            )}
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--color-text-muted)', borderTop: '1px solid hsla(0,0%,100%,0.02)', paddingTop: '0.25rem' }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }} title={match.stadium}>📍 {match.stadium}</span>
+          <span className="text-neon-yellow" style={{ fontWeight: 'bold' }}>📅 {formattedDateTime} hs (ARG)</span>
+        </div>
       </div>
 
       {/* Botón Comodín */}
