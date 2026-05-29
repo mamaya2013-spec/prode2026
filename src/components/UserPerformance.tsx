@@ -646,35 +646,40 @@ export const UserPerformance: React.FC<UserPerformanceProps> = ({ onNavigate }) 
             </span>
 
             {favoriteTeamId || leastFavoriteTeamId ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.2rem' }}>
-                {/* Favorito */}
-                {favoriteTeamId && (
-                  <div style={{ background: 'hsla(135,90%,55%,0.03)', border: '1px solid hsla(135,90%,55%,0.1)', borderRadius: '8px', padding: '0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', textTransform: 'uppercase', fontWeight: 'bold' }}>
-                      Tu Favorito 👍
-                    </span>
-                    <ShieldSvg teamId={favoriteTeamId} size={56} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{TEAMS[favoriteTeamId]?.name || favoriteTeamId}</span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
-                      {maxWins} victorias pronosticadas
-                    </span>
-                  </div>
-                )}
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.2rem' }}>
+                  {/* Favorito */}
+                  {favoriteTeamId && (
+                    <div style={{ background: 'hsla(135,90%,55%,0.03)', border: '1px solid hsla(135,90%,55%,0.1)', borderRadius: '8px', padding: '0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', textTransform: 'uppercase', fontWeight: 'bold' }}>
+                        Tu Favorito 👍
+                      </span>
+                      <ShieldSvg teamId={favoriteTeamId} size={56} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{TEAMS[favoriteTeamId]?.name || favoriteTeamId}</span>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
+                        {maxWins} victorias pronosticadas
+                      </span>
+                    </div>
+                  )}
 
-                {/* Menos Fe */}
-                {leastFavoriteTeamId && (
-                  <div style={{ background: 'hsla(355,90%,55%,0.03)', border: '1px solid hsla(355,90%,55%,0.1)', borderRadius: '8px', padding: '0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--color-accent)', textTransform: 'uppercase', fontWeight: 'bold' }}>
-                      Menos Fe 👎
-                    </span>
-                    <ShieldSvg teamId={leastFavoriteTeamId} size={56} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{TEAMS[leastFavoriteTeamId]?.name || leastFavoriteTeamId}</span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
-                      {maxLosses} derrotas pronosticadas
-                    </span>
-                  </div>
-                )}
-              </div>
+                  {/* Menos Fe */}
+                  {leastFavoriteTeamId && (
+                    <div style={{ background: 'hsla(355,90%,55%,0.03)', border: '1px solid hsla(355,90%,55%,0.1)', borderRadius: '8px', padding: '0.65rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--color-accent)', textTransform: 'uppercase', fontWeight: 'bold' }}>
+                        Menos Fe 👎
+                      </span>
+                      <ShieldSvg teamId={leastFavoriteTeamId} size={56} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{TEAMS[leastFavoriteTeamId]?.name || leastFavoriteTeamId}</span>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
+                        {maxLosses} derrotas pronosticadas
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', borderTop: '1px dotted hsla(0,0%,100%,0.06)', paddingTop: '0.4rem', textAlign: 'center' }}>
+                  💡 Se calcula automáticamente según tus victorias/derrotas pronosticadas.
+                </div>
+              </>
             ) : (
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '0.75rem 0' }}>
                 Pronostica victorias y derrotas para calcular la afinidad con tus selecciones preferidas.
