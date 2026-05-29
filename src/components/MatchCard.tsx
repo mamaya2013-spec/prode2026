@@ -9,7 +9,7 @@ interface MatchCardProps {
 }
 
 export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
-  const { currentUser, predictions, saveUserPrediction, getSystemTime, liveSimulatedScores } = useProde();
+  const { currentUser, predictions, saveUserPrediction, getSystemTime, liveSimulatedScores, users } = useProde();
   
   // Buscar predicción existente de este usuario
   const userPred = currentUser
@@ -400,6 +400,50 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
           )}
         </div>
       )}
+
+      {/* Pulso de la Tribu */}
+      {(() => {
+        if (!currentUser) return null;
+        const groupUsers = users.filter(u => u.groupId === currentUser.groupId);
+        const groupUserIds = groupUsers.map(u => u.id);
+        const matchPreds = predictions.filter(p => p.matchId === match.id && groupUserIds.includes(p.userId));
+
+        if (matchPreds.length === 0) return null;
+
+        let localWins = 0;
+        let draws = 0;
+        let awayWins = 0;
+
+        matchPreds.forEach(p => {
+          if (p.predictedScoreA > p.predictedScoreB) localWins++;
+          else if (p.predictedScoreA < p.predictedScoreB) awayWins++;
+          else draws++;
+        });
+
+        const total = matchPreds.length;
+        const pctLocal = Math.round((localWins / total) * 100);
+        const pctDraw = Math.round((draws / total) * 100);
+        const pctAway = Math.round((awayWins / total) * 100);
+
+        return (
+          <div className="community-pulse-container" style={{ marginTop: '0.5rem', padding: '0.4rem 0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', fontSize: '0.7rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)', marginBottom: '0.2rem', fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 'bold' }}>
+              <span>📊 Pulso de la Tribu</span>
+              <span>{total} {total === 1 ? 'voto' : 'votos'}</span>
+            </div>
+            <div className="pulse-bar" style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden', background: 'rgba(255,255,255,0.1)' }}>
+              <div style={{ width: `${pctLocal}%`, background: teamA?.color || 'var(--color-primary)', transition: 'width 0.3s ease' }} title={`Gana ${teamA?.name}: ${pctLocal}%`} />
+              <div style={{ width: `${pctDraw}%`, background: '#888', transition: 'width 0.3s ease' }} title={`Empate: ${pctDraw}%`} />
+              <div style={{ width: `${pctAway}%`, background: teamB?.color || 'var(--color-accent)', transition: 'width 0.3s ease' }} title={`Gana ${teamB?.name}: ${pctAway}%`} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.65rem', fontWeight: 'bold' }}>
+              <span style={{ color: teamA?.color || 'var(--color-primary)' }}>{teamA?.short} {pctLocal}%</span>
+              <span style={{ color: '#aaa' }}>Empate {pctDraw}%</span>
+              <span style={{ color: teamB?.color || 'var(--color-accent)' }}>{teamB?.short} {pctAway}%</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Alertas de error sutiles en la tarjeta */}
       {errorMsg && (

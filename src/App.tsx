@@ -7,6 +7,8 @@ import Achievements from './components/Achievements';
 import AdminDashboard from './components/AdminDashboard';
 import PwaInstallBanner from './components/PwaInstallBanner';
 import GroupChat from './components/GroupChat';
+import soundService from './services/soundService';
+import JerseySvg from './components/JerseySvg';
 import UserPerformance from './components/UserPerformance';
 import TournamentBracket from './components/TournamentBracket';
 import bicycleKickImg from './assets/soccer_bicycle_kick.png';
@@ -38,10 +40,33 @@ const AppContent: React.FC = () => {
     clearRecentAchievement,
     systemState,
     toggleAdminMode,
-    generateInviteLink
+    generateInviteLink,
+    saveUserJersey
   } = useProde();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'standings' | 'matches' | 'medals' | 'group' | 'admin' | 'chat'>('dashboard');
+  const [isMuted, setIsMuted] = useState(soundService.isMuted());
+
+  // Estados locales para el editor de camisetas
+  const [jerseyColorA, setJerseyColorA] = useState('#00d4ff');
+  const [jerseyColorB, setJerseyColorB] = useState('#ffffff');
+  const [jerseyPattern, setJerseyPattern] = useState<'solid' | 'striped' | 'hoops' | 'sash'>('solid');
+  const [jerseyNumber, setJerseyNumber] = useState(10);
+
+  useEffect(() => {
+    if (currentUser?.jersey) {
+      setJerseyColorA(currentUser.jersey.primaryColor);
+      setJerseyColorB(currentUser.jersey.secondaryColor);
+      setJerseyPattern(currentUser.jersey.pattern);
+      setJerseyNumber(currentUser.jersey.number);
+    }
+  }, [currentUser]);
+
+  const toggleMute = () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    soundService.setMute(newMuted);
+  };
   
   // Parámetros de URL
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -481,7 +506,14 @@ const AppContent: React.FC = () => {
       
       {/* ────────────────── COLUMNA 1: SIDEBAR IZQUIERDA (DESKTOP) ────────────────── */}
       <aside className="desktop-sidebar">
-        <div className="sidebar-logo-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', padding: '1rem 0.5rem' }}>
+        <div className="sidebar-logo-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', padding: '1rem 0.5rem', position: 'relative' }}>
+          <button 
+            onClick={toggleMute}
+            style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#fff' }}
+            title={isMuted ? 'Activar Sonidos' : 'Silenciar Sonidos'}
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
           <img src={appLogo} alt="Logo" style={{ width: '60px', height: '60px', borderRadius: '12px', boxShadow: '0 0 10px rgba(0, 212, 255, 0.3)' }} />
           <h2 className="app-title sport-font" style={{ fontSize: '1.15rem', margin: '0.2rem 0 0 0', letterSpacing: '0.5px' }}>LA CAPRICHOSA</h2>
           <span className="group-badge" style={{ marginTop: '0.1rem' }}>
@@ -538,7 +570,16 @@ const AppContent: React.FC = () => {
         {/* Resumen rápido de perfil en Sidebar */}
         <div style={{ marginTop: 'auto', borderTop: '1px solid hsla(0,0%,100%,0.08)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Usuario Logueado:</div>
-          <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>{currentUser.name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <JerseySvg 
+              primaryColor={currentUser.jersey?.primaryColor} 
+              secondaryColor={currentUser.jersey?.secondaryColor} 
+              pattern={currentUser.jersey?.pattern} 
+              number={currentUser.jersey?.number} 
+              size={32} 
+            />
+            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-primary)' }}>{currentUser.name}</div>
+          </div>
           <button 
             onClick={logout}
             className="btn-premium btn-secondary" 
@@ -556,7 +597,14 @@ const AppContent: React.FC = () => {
         <div className="bg-soccer-action bg-action-center" style={{ backgroundImage: `url(${BG_ACTION_IMAGES[bgCenterIdx]})`, left: '40%', top: '60%', width: '240px', height: '240px', opacity: 0.04, transition: 'background-image 1.5s ease-in-out' }} />
         
         {/* Cabecera Principal (Mobile Header) */}
-        <header className="app-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+        <header className="app-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', position: 'relative' }}>
+          <button 
+            onClick={toggleMute}
+            style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#fff', padding: '0.25rem' }}
+            title={isMuted ? 'Activar Sonidos' : 'Silenciar Sonidos'}
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
           <img src={appLogo} alt="Logo" style={{ width: '45px', height: '45px', borderRadius: '10px', boxShadow: '0 0 8px rgba(0, 212, 255, 0.3)' }} />
           <h1 className="app-title sport-font" style={{ fontSize: '1.25rem', margin: '0.1rem 0 0 0', letterSpacing: '0.5px' }}>LA CAPRICHOSA</h1>
           <span className="group-badge" style={{ marginTop: '0.1rem' }}>
@@ -615,7 +663,7 @@ const AppContent: React.FC = () => {
           )}
 
           {activeTab === 'standings' && (
-            <GroupLeaderboard />
+            <GroupLeaderboard onNavigate={setActiveTab} />
           )}
 
           {activeTab === 'matches' && (
@@ -739,6 +787,89 @@ const AppContent: React.FC = () => {
                 >
                   Copiar Enlace de Invitación
                 </button>
+
+                {/* Personalizar Camiseta */}
+                <div className="glass-panel" style={{ width: '100%', marginTop: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center', background: 'rgba(255,255,255,0.01)' }}>
+                  <span className="sport-font" style={{ fontSize: '0.85rem', color: 'var(--color-primary)', textTransform: 'uppercase' }}>
+                    👕 Diseñar tu Camiseta
+                  </span>
+                  
+                  {/* Live Preview */}
+                  <div style={{ margin: '0.25rem 0' }}>
+                    <JerseySvg 
+                      primaryColor={jerseyColorA} 
+                      secondaryColor={jerseyColorB} 
+                      pattern={jerseyPattern} 
+                      number={jerseyNumber} 
+                      size={60} 
+                    />
+                  </div>
+
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.15rem' }}>Color Principal</label>
+                        <input 
+                          type="color" 
+                          value={jerseyColorA} 
+                          onChange={e => {
+                            setJerseyColorA(e.target.value);
+                            saveUserJersey({ primaryColor: e.target.value, secondaryColor: jerseyColorB, pattern: jerseyPattern, number: jerseyNumber });
+                          }} 
+                          style={{ width: '100%', height: '30px', border: '1px solid hsla(0,0%,100%,0.1)', borderRadius: '4px', background: 'none', cursor: 'pointer' }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.15rem' }}>Color Detalle</label>
+                        <input 
+                          type="color" 
+                          value={jerseyColorB} 
+                          onChange={e => {
+                            setJerseyColorB(e.target.value);
+                            saveUserJersey({ primaryColor: jerseyColorA, secondaryColor: e.target.value, pattern: jerseyPattern, number: jerseyNumber });
+                          }} 
+                          style={{ width: '100%', height: '30px', border: '1px solid hsla(0,0%,100%,0.1)', borderRadius: '4px', background: 'none', cursor: 'pointer' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.15rem' }}>Estilo / Diseño</label>
+                      <select 
+                        className="input-field" 
+                        value={jerseyPattern} 
+                        onChange={e => {
+                          const pat = e.target.value as any;
+                          setJerseyPattern(pat);
+                          saveUserJersey({ primaryColor: jerseyColorA, secondaryColor: jerseyColorB, pattern: pat, number: jerseyNumber });
+                        }}
+                        style={{ width: '100%', padding: '0.35rem', fontSize: '0.75rem', background: 'hsla(240, 35%, 8%, 0.8)' }}
+                      >
+                        <option value="solid">Liso</option>
+                        <option value="striped">Bastones Verticales</option>
+                        <option value="hoops">Franjas Horizontales</option>
+                        <option value="sash">Banda Diagonal</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.15rem' }}>Número (1-99)</label>
+                      <input 
+                        type="number" 
+                        className="input-field" 
+                        min="1" 
+                        max="99" 
+                        value={jerseyNumber} 
+                        onChange={e => {
+                          const num = Math.min(99, Math.max(1, parseInt(e.target.value) || 10));
+                          setJerseyNumber(num);
+                          saveUserJersey({ primaryColor: jerseyColorA, secondaryColor: jerseyColorB, pattern: jerseyPattern, number: num });
+                        }}
+                        style={{ width: '100%', padding: '0.35rem', fontSize: '0.75rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 <div style={{ borderTop: '1px solid hsla(0,0%,100%,0.08)', width: '100%', paddingTop: '1rem', marginTop: '0.5rem' }}>
                   <button 

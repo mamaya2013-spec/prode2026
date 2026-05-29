@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProde } from '../context/ProdeContext';
 import ShieldSvg from './ShieldSvg';
 import { BADGES } from './Achievements';
 import { TEAMS } from '../data/matches2026';
+import JerseySvg from './JerseySvg';
 
 interface UserPerformanceProps {
   onNavigate?: (tab: 'dashboard' | 'standings' | 'matches' | 'medals' | 'group' | 'admin' | 'chat') => void;
@@ -11,9 +12,31 @@ interface UserPerformanceProps {
 export const UserPerformance: React.FC<UserPerformanceProps> = ({ onNavigate }) => {
   const { currentUser, predictions, matches, users, sendChatMessage } = useProde();
   const [mode, setMode] = useState<'points' | 'achievements'>('points');
-  const [activeSubTab, setActiveSubTab] = useState<'resumen' | 'rivales' | 'chicanas'>('resumen');
+  const [activeSubTab, setActiveSubTab] = useState<'resumen' | 'rivales' | 'chicanas' | 'duelos'>('resumen');
   const [selectedCategory, setSelectedCategory] = useState<'exact' | 'simple' | 'wrong' | null>(null);
   const [chicanaSuccess, setChicanaSuccess] = useState<string | null>(null);
+  const [selectedRivalId, setSelectedRivalId] = useState<string>('');
+  const [selectedMatchId, setSelectedMatchId] = useState<string>('');
+  const [duelSuccess, setDuelSuccess] = useState<string | null>(null);
+  const [duelError, setDuelError] = useState<string | null>(null);
+
+  const { duels, createDuel, respondToDuel, getSystemTime } = useProde();
+
+  useEffect(() => {
+    const handleNavigate = () => {
+      setActiveSubTab('duelos');
+    };
+    window.addEventListener('navigate_to_duelos', handleNavigate);
+    return () => window.removeEventListener('navigate_to_duelos', handleNavigate);
+  }, []);
+
+  useEffect(() => {
+    const preId = sessionStorage.getItem('challenge_target_user_id');
+    if (preId) {
+      setSelectedRivalId(preId);
+      sessionStorage.removeItem('challenge_target_user_id');
+    }
+  }, [activeSubTab]);
 
   if (!currentUser) return null;
 
@@ -343,6 +366,24 @@ export const UserPerformance: React.FC<UserPerformanceProps> = ({ onNavigate }) 
           }}
         >
           💬 Chicanas
+        </button>
+        <button
+          onClick={() => setActiveSubTab('duelos')}
+          className="sport-font"
+          style={{
+            flex: 1,
+            background: activeSubTab === 'duelos' ? 'var(--gradient-neon)' : 'none',
+            color: activeSubTab === 'duelos' ? 'var(--color-text-dark)' : 'var(--color-text-muted)',
+            border: 'none',
+            padding: '0.5rem 0',
+            borderRadius: '6px',
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            textTransform: 'uppercase',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          ⚔️ Duelos
         </button>
       </div>
 
@@ -910,6 +951,285 @@ export const UserPerformance: React.FC<UserPerformanceProps> = ({ onNavigate }) 
                 </button>
               ))}
             </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ────────────────── CONTENIDO: TAB 4: DUELOS 1v1 ────────────────── */}
+      {activeSubTab === 'duelos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }} className="page-swipe">
+          
+          {/* Crear Duelo */}
+          <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <span className="sport-font" style={{ fontSize: '0.85rem', color: 'var(--color-secondary)', textTransform: 'uppercase', display: 'block' }}>
+              ⚔️ Desafiar a un Amigo
+            </span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+              Reta a un compañero de tu grupo en un partido del fixture. ¡El que consiga más puntos en ese partido gana el duelo!
+            </span>
+
+            {duelSuccess && (
+              <div style={{ padding: '0.5rem', background: 'rgba(135,90,55,0.08)', border: '1px solid var(--color-primary)', color: 'var(--color-primary)', borderRadius: '6px', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                {duelSuccess}
+              </div>
+            )}
+            {duelError && (
+              <div style={{ padding: '0.5rem', background: 'rgba(328,100,54,0.08)', border: '1px solid var(--color-accent)', color: 'var(--color-accent)', borderRadius: '6px', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                {duelError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+              <div>
+                <label style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>Seleccionar Rival</label>
+                <select 
+                  className="input-field" 
+                  value={selectedRivalId}
+                  onChange={e => setSelectedRivalId(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem', fontSize: '0.8rem', background: 'hsla(240, 35%, 8%, 0.8)' }}
+                >
+                  <option value="">-- Elige un competidor --</option>
+                  {users.filter(u => u.groupId === currentUser.groupId && u.id !== currentUser.id).map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>Seleccionar Partido</label>
+                <select 
+                  className="input-field" 
+                  value={selectedMatchId}
+                  onChange={e => setSelectedMatchId(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem', fontSize: '0.8rem', background: 'hsla(240, 35%, 8%, 0.8)' }}
+                >
+                  <option value="">-- Elige un partido pendiente --</option>
+                  {matches.filter(m => {
+                    const kickTime = new Date(m.date).getTime();
+                    const sysTime = getSystemTime().getTime();
+                    return m.status === 'pending' && (kickTime - sysTime > 60 * 60 * 1000);
+                  }).map(m => {
+                    const teamAName = TEAMS[m.teamA]?.name || m.teamA;
+                    const teamBName = TEAMS[m.teamB]?.name || m.teamB;
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {teamAName} vs {teamBName} ({m.phase})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <button 
+                className="btn-premium"
+                style={{ marginTop: '0.4rem', width: '100%' }}
+                onClick={() => {
+                  setDuelSuccess(null);
+                  setDuelError(null);
+                  if (!selectedRivalId || !selectedMatchId) {
+                    setDuelError('Por favor selecciona un rival y un partido.');
+                    return;
+                  }
+                  const res = createDuel(selectedRivalId, selectedMatchId);
+                  if (res.success) {
+                    setDuelSuccess('¡Desafío enviado con éxito! Se notificó en el chat del grupo.');
+                    setSelectedMatchId('');
+                  } else {
+                    setDuelError(res.error || 'Ocurrió un error al crear el desafío.');
+                  }
+                }}
+              >
+                ⚔️ Enviar Desafío de Duelo
+              </button>
+            </div>
+          </div>
+
+          {/* Desafíos Pendientes por Aceptar */}
+          <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <span className="sport-font" style={{ fontSize: '0.85rem', color: 'var(--color-primary)', textTransform: 'uppercase' }}>
+              📩 Desafíos Recibidos
+            </span>
+            {(() => {
+              const received = duels.filter(d => d.challengedId === currentUser.id && d.status === 'pending');
+              if (received.length === 0) {
+                return <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', margin: '0.5rem 0' }}>No tienes desafíos pendientes.</p>;
+              }
+              return received.map(d => {
+                const challenger = users.find(u => u.id === d.challengerId);
+                const matchObj = matches.find(m => m.id === d.matchId);
+                const teamA = TEAMS[matchObj?.teamA || '']?.name || 'Local';
+                const teamB = TEAMS[matchObj?.teamB || '']?.name || 'Visitante';
+                return (
+                  <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      {challenger?.jersey && (
+                        <JerseySvg primaryColor={challenger.jersey.primaryColor} secondaryColor={challenger.jersey.secondaryColor} pattern={challenger.jersey.pattern} number={challenger.jersey.number} size={24} />
+                      )}
+                      <div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', display: 'block' }}>{challenger?.name} te retó</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>En {teamA} vs {teamB}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      <button 
+                        onClick={() => respondToDuel(d.id, 'accept')}
+                        className="btn-premium"
+                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.65rem', textTransform: 'none' }}
+                      >
+                        Aceptar
+                      </button>
+                      <button 
+                        onClick={() => respondToDuel(d.id, 'decline')}
+                        className="btn-premium btn-secondary"
+                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.65rem', textTransform: 'none' }}
+                      >
+                        Rechazar
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+
+          {/* Duelos Activos */}
+          <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <span className="sport-font" style={{ fontSize: '0.85rem', color: 'var(--color-secondary)', textTransform: 'uppercase' }}>
+              🏟️ Duelos Activos
+            </span>
+            {(() => {
+              const active = duels.filter(d => 
+                (d.challengerId === currentUser.id || d.challengedId === currentUser.id) &&
+                (d.status === 'accepted' || (d.challengerId === currentUser.id && d.status === 'pending'))
+              );
+              if (active.length === 0) {
+                return <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', margin: '0.5rem 0' }}>No tienes duelos activos en este momento.</p>;
+              }
+              return active.map(d => {
+                const challenger = users.find(u => u.id === d.challengerId);
+                const challenged = users.find(u => u.id === d.challengedId);
+                const matchObj = matches.find(m => m.id === d.matchId);
+                const teamA = TEAMS[matchObj?.teamA || '']?.name || 'Local';
+                const teamB = TEAMS[matchObj?.teamB || '']?.name || 'Visitante';
+                
+                const matchKickoff = new Date(matchObj?.date || '').getTime();
+                const sysTime = getSystemTime().getTime();
+                const isLocked = matchKickoff - sysTime <= 60 * 60 * 1000;
+
+                const predChallenger = predictions.find(p => p.userId === d.challengerId && p.matchId === d.matchId);
+                const predChallenged = predictions.find(p => p.userId === d.challengedId && p.matchId === d.matchId);
+
+                const getPredStr = (pred: typeof predChallenger) => {
+                  if (!pred) return 'Sin Pronóstico';
+                  if (!isLocked && pred.userId !== currentUser.id) return '🔒 Oculto';
+                  return `${pred.predictedScoreA} - ${pred.predictedScoreB}${pred.isJoker ? ' ⭐' : ''}`;
+                };
+
+                return (
+                  <div key={d.id} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid hsla(0,0%,100%,0.04)', padding: '0.65rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--color-text-muted)', borderBottom: '1px dashed rgba(255,255,255,0.06)', paddingBottom: '0.2rem' }}>
+                      <span>{matchObj?.phase}</span>
+                      <span className={d.status === 'pending' ? 'text-neon-yellow' : 'text-neon-green'}>
+                        {d.status === 'pending' ? 'Esperando rival' : 'Activo'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', textAlign: 'center', margin: '0.15rem 0' }}>
+                      {teamA} vs {teamB}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', width: '45%' }}>
+                        {challenger?.jersey && <JerseySvg primaryColor={challenger.jersey.primaryColor} secondaryColor={challenger.jersey.secondaryColor} pattern={challenger.jersey.pattern} number={challenger.jersey.number} size={16} />}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{challenger?.name}</span>
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', width: '10%', textAlign: 'center' }}>VS</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', width: '45%', justifyContent: 'flex-end' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{challenged?.name}</span>
+                        {challenged?.jersey && <JerseySvg primaryColor={challenged.jersey.primaryColor} secondaryColor={challenged.jersey.secondaryColor} pattern={challenged.jersey.pattern} number={challenged.jersey.number} size={16} />}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--color-text-muted)', padding: '0 0.25rem' }}>
+                      <span>Retador: {getPredStr(predChallenger)}</span>
+                      <span>Retado: {getPredStr(predChallenged)}</span>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+
+          {/* Historial de Duelos */}
+          <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <span className="sport-font" style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+              📜 Historial de Duelos
+            </span>
+            {(() => {
+              const history = duels.filter(d => 
+                (d.challengerId === currentUser.id || d.challengedId === currentUser.id) &&
+                (d.status === 'completed' || d.status === 'declined')
+              );
+              if (history.length === 0) {
+                return <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', margin: '0.5rem 0' }}>Aún no tienes duelos finalizados.</p>;
+              }
+              return history.map(d => {
+                const challenger = users.find(u => u.id === d.challengerId);
+                const challenged = users.find(u => u.id === d.challengedId);
+                const matchObj = matches.find(m => m.id === d.matchId);
+                const teamA = TEAMS[matchObj?.teamA || '']?.name || matchObj?.teamA;
+                const teamB = TEAMS[matchObj?.teamB || '']?.name || matchObj?.teamB;
+
+                if (d.status === 'declined') {
+                  return (
+                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.45rem 0.5rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: '6px', fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
+                      <span>⚔️ {challenger?.name} vs {challenged?.name}</span>
+                      <span>Rechazado 🏳️</span>
+                    </div>
+                  );
+                }
+
+                const isWinnerChallenger = d.winnerId === d.challengerId;
+                const isWinnerChallenged = d.winnerId === d.challengedId;
+                const isDraw = d.winnerId === 'draw';
+
+                let resultStr = 'Empate 🤝';
+                let isWinnerMe = false;
+                if (d.winnerId === currentUser.id) {
+                  resultStr = '¡Ganaste! 🏆';
+                  isWinnerMe = true;
+                } else if (d.winnerId !== 'draw') {
+                  resultStr = 'Perdiste ❌';
+                }
+
+                return (
+                  <div 
+                    key={d.id} 
+                    style={{ 
+                      background: isDraw ? 'rgba(255,255,255,0.01)' : (isWinnerMe ? 'rgba(135,90,55,0.04)' : 'rgba(328,100,54,0.01)'),
+                      border: isDraw ? '1px solid hsla(0,0%,100%,0.04)' : (isWinnerMe ? '1px solid rgba(135,90,55,0.2)' : '1px solid rgba(328,100,54,0.08)'),
+                      padding: '0.5rem 0.65rem', 
+                      borderRadius: '8px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '0.2rem' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
+                      <span>{teamA} {matchObj?.scoreA} - {matchObj?.scoreB} {teamB}</span>
+                      <span style={{ fontWeight: 'bold', color: isWinnerMe ? 'var(--color-primary)' : 'inherit' }}>{resultStr}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', alignItems: 'center' }}>
+                      <span style={{ textDecoration: isWinnerChallenger ? 'underline' : 'none' }}>
+                        {challenger?.name}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)' }}>vs</span>
+                      <span style={{ textDecoration: isWinnerChallenged ? 'underline' : 'none' }}>
+                        {challenged?.name}
+                      </span>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
 
         </div>

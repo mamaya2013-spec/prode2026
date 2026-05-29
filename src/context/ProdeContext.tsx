@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
-import type { User, Group, Prediction, SystemState, ChatMessage } from '../services/dataService';
+import type { User, Group, Prediction, SystemState, ChatMessage, Duel } from '../services/dataService';
 import type { Match } from '../data/matches2026';
+import { TEAMS } from '../data/matches2026';
 import { liveFeedService } from '../services/liveFeedService';
+import { soundService } from '../services/soundService';
 
 interface ProdeContextType {
   currentUser: User | null;
@@ -13,6 +15,7 @@ interface ProdeContextType {
   predictions: Prediction[];
   chatMessages: ChatMessage[];
   systemState: SystemState;
+  duels: Duel[];
   login: (username: string, pin: string) => boolean;
   logout: () => void;
   registerWithInvite: (username: string, pin: string, inviteToken: string) => boolean;
@@ -28,6 +31,9 @@ interface ProdeContextType {
   clearRecentAchievement: () => void;
   liveSimulatedScores: Record<string, { scoreA: number; scoreB: number }> | null;
   setLiveSimulatedScores: React.Dispatch<React.SetStateAction<Record<string, { scoreA: number; scoreB: number }> | null>>;
+  createDuel: (challengedId: string, matchId: string) => { success: boolean; error?: string };
+  respondToDuel: (duelId: string, action: 'accept' | 'decline') => void;
+  saveUserJersey: (jersey: User['jersey']) => void;
 }
 
 const TEAM_CONTINENTS: Record<string, string> = {
@@ -61,6 +67,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [systemState, setSystemState] = useState<SystemState>({ simulatedTimeOffset: 0, isAdmin: false });
   const [recentAchievementUnlocked, setRecentAchievementUnlocked] = useState<{ title: string; desc: string; icon: string } | null>(null);
   const [liveSimulatedScores, setLiveSimulatedScores] = useState<Record<string, { scoreA: number; scoreB: number }> | null>(null);
+  const [duels, setDuels] = useState<Duel[]>([]);
 
   // Cargar base de datos inicial al montar
   useEffect(() => {
@@ -69,6 +76,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setGroups(dataService.getGroups());
     setPredictions(dataService.getPredictions());
     setChatMessages(dataService.getChatMessages());
+    setDuels(dataService.getDuels());
     
     const savedState = dataService.getSystemState();
     setSystemState(savedState);
@@ -77,7 +85,6 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const savedMatches = dataService.getMatches();
     const systemTime = new Date(new Date().getTime() + savedState.simulatedTimeOffset);
     const updated = savedMatches.map(m => {
-      // Si el admin cargó un resultado fijo, lo respeta. De lo contrario, calcula el feed
       if (m.status === 'finished' && m.scoreA !== undefined) return m;
 
       const live = liveFeedService.calculateLiveMatchState(m, systemTime);
@@ -111,6 +118,12 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return new Date(realTime.getTime() + systemState.simulatedTimeOffset);
   };
 
+  // Helper para desbloquear logros y sonar chime
+  const unlockAchievement = (ach: { title: string; desc: string; icon: string }) => {
+    setRecentAchievementUnlocked(ach);
+    soundService.playAchievement();
+  };
+
   // Hilo de intervalo para actualizar marcadores automáticos en vivo y alertas de goles
   useEffect(() => {
     const interval = setInterval(() => {
@@ -120,26 +133,23 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       let lastMatchFinishedId = undefined;
 
       const updated = matches.map(m => {
-        // Respetar resultados manuales guardados por el admin
         if (m.status === 'finished' && m.scoreA !== undefined && !matches.find(orig => orig.id === m.id && orig.status === 'live')) {
           return m;
         }
 
         const live = liveFeedService.calculateLiveMatchState(m, systemTime);
         
-        // Evaluar cambios relevantes
         if (live.status !== m.status || live.currentScoreA !== m.scoreA || live.currentScoreB !== m.scoreB) {
           matchesUpdated = true;
 
-          // Si acaba de finalizar de forma automática
           if (live.status === 'finished' && m.status !== 'finished') {
             pointsNeedRecalculate = true;
             lastMatchFinishedId = m.id;
           }
 
-          // Si acaba de ocurrir un gol en este tick, inyectar alerta en el chat
           if (live.isGoalJustScored && live.goalMessage && currentUser) {
             injectSystemChatMessage(currentUser.groupId, live.goalMessage);
+            soundService.playGoal(); // Trigger del sonido de gol en vivo
           }
 
           return {
@@ -160,7 +170,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           recalculatePoints(updated, lastMatchFinishedId);
         }
       }
-    }, 10000); // Polling cada 10 segundos
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [matches, currentUser, systemState.simulatedTimeOffset]);
@@ -171,7 +181,6 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSystemState(newState);
     dataService.saveSystemState(newState);
 
-    // Al viajar en el tiempo, actualiza masivamente todos los estados de los partidos
     const savedMatches = dataService.getMatches();
     const systemTime = new Date(new Date().getTime() + offsetMs);
     let lastFinishedId = undefined;
@@ -195,7 +204,6 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMatches(updated);
     dataService.saveMatches(updated);
     
-    // Recalcula los puntos inmediatamente para toda la base de datos
     recalculatePoints(updated, lastFinishedId);
   };
 
@@ -240,7 +248,13 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       streak: 0,
       achievements: [],
       jokersUsedGroup: 0,
-      jokersUsedFinal: 0
+      jokersUsedFinal: 0,
+      jersey: {
+        primaryColor: '#00d4ff',
+        secondaryColor: '#ffffff',
+        pattern: 'solid',
+        number: 10
+      }
     };
 
     const newUsersList = [...users, newUser];
@@ -389,7 +403,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const newAchievements = [...u.achievements];
         if (isJoker && !newAchievements.includes('apuestaTodo')) {
           newAchievements.push('apuestaTodo');
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'All-In',
             desc: 'Usaste tu primer comodín en un partido.',
             icon: 'star'
@@ -400,7 +414,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const twentyFourHours = 24 * 60 * 60 * 1000;
         if (timeDiff >= twentyFourHours && !newAchievements.includes('fiel')) {
           newAchievements.push('fiel');
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Ticket Holográfico',
             desc: 'Guardaste una predicción con más de 24 horas de antelación.',
             icon: 'ticket'
@@ -408,7 +422,6 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         const updated = { ...u, jokersUsedGroup, jokersUsedFinal, achievements: newAchievements };
-
         setCurrentUser(updated);
         return updated;
       }
@@ -419,6 +432,9 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUsers(updatedUsers);
     dataService.savePredictions(updatedPredictions);
     dataService.saveUsers(updatedUsers);
+
+    // Reproducir silbato de árbitro ante el cambio de predicción
+    soundService.playWhistle();
 
     return { success: true, animation: true };
   };
@@ -536,7 +552,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (winnerCorrectCount >= 1 && !achievements.includes('primerGol')) {
         achievements.push('primerGol');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Primer Gol',
             desc: 'Acertaste el ganador de un partido por primera vez.',
             icon: 'net'
@@ -548,7 +564,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (hasCeroACero && !achievements.includes('ceroACero')) {
         achievements.push('ceroACero');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Muro Infranqueable',
             desc: 'Predeciste correctamente un empate 0-0.',
             icon: 'gloves'
@@ -560,7 +576,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (maxStreak >= 3 && !achievements.includes('invicto')) {
         achievements.push('invicto');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Silbato de Oro',
             desc: 'Encadenaste una Racha de Fuego de 3 partidos sumando puntos.',
             icon: 'whistle'
@@ -572,7 +588,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (hasFrancotirador && !achievements.includes('francotirador')) {
         achievements.push('francotirador');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Botín de Oro',
             desc: 'Acertaste un resultado exacto con 4 o más goles.',
             icon: 'boot'
@@ -584,7 +600,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (hasMatagigantes && !achievements.includes('matagigantes')) {
         achievements.push('matagigantes');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Escudo del León',
             desc: 'Predeciste la victoria de un equipo débil frente a una potencia.',
             icon: 'shield'
@@ -596,7 +612,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (winnerCorrectCount >= 5 && !achievements.includes('goleador')) {
         achievements.push('goleador');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Máquina de Goles',
             desc: 'Acertaste 5 ganadores correctos en total.',
             icon: 'rocket'
@@ -608,7 +624,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (hasDobleComodin && !achievements.includes('dobleComodin')) {
         achievements.push('dobleComodin');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Jugador de Póker',
             desc: 'Ganaste puntos dobles con un comodín activo.',
             icon: 'lightning'
@@ -620,7 +636,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (exactMatchesCount >= 3 && !achievements.includes('profeta')) {
         achievements.push('profeta');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Pelota de Cristal',
             desc: 'Lograste 3 aciertos exactos de marcadores en el prode.',
             icon: 'crystal'
@@ -632,7 +648,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (maxStreak >= 5 && !achievements.includes('rachaFuego')) {
         achievements.push('rachaFuego');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Racha Infernal',
             desc: 'Encadenaste una racha de 5 o más partidos acertando.',
             icon: 'flame'
@@ -644,7 +660,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (correctContinents.size >= 4 && !achievements.includes('globalista')) {
         achievements.push('globalista');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Trotamundos',
             desc: 'Acertaste ganadores de 4 continentes diferentes.',
             icon: 'globe'
@@ -656,7 +672,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (exactMatchesCount >= 5 && !achievements.includes('leyenda')) {
         achievements.push('leyenda');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Leyenda Absoluta',
             desc: 'Acertaste 5 marcadores exactos en el prode.',
             icon: 'crown'
@@ -668,7 +684,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (totalPoints >= 30 && !achievements.includes('diamante')) {
         achievements.push('diamante');
         if (currentUser && user.id === currentUser.id) {
-          setRecentAchievementUnlocked({
+          unlockAchievement({
             title: 'Diamante Eterno',
             desc: 'Acumulaste 30 o más puntos en el prode.',
             icon: 'diamond'
@@ -691,7 +707,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (index < 3 && !achievements.includes('top3')) {
           achievements.push('top3');
           if (currentUser && u.id === currentUser.id) {
-            setRecentAchievementUnlocked({
+            unlockAchievement({
               title: 'Podio Mundial',
               desc: 'Alcanzaste el Top 3 de tu grupo en el leaderboard.',
               icon: 'medal'
@@ -712,6 +728,71 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setUsers(finalRecalculatedUsers);
     dataService.saveUsers(finalRecalculatedUsers);
+
+    // Resoluciones de Duelos 1v1
+    const currentDuels = dataService.getDuels();
+    let duelsUpdated = false;
+    const resolvedDuels = currentDuels.map(d => {
+      if (d.status !== 'accepted') return d;
+      const match = updatedMatchesList.find(m => m.id === d.matchId);
+      if (!match || match.status !== 'finished') return d;
+
+      duelsUpdated = true;
+
+      const calcPointsForPred = (userId: string) => {
+        const pred = allPredictions.find(p => p.userId === userId && p.matchId === d.matchId);
+        if (!pred) return 0;
+        const realA = match.scoreA!;
+        const realB = match.scoreB!;
+        const predA = pred.predictedScoreA;
+        const predB = pred.predictedScoreB;
+        const isExact = realA === predA && realB === predB;
+        const isWinner = (realA > realB && predA > predB) || (realA < realB && predA < predB) || (realA === realB && predA === predB);
+        let pts = isExact ? 3 : (isWinner ? 1 : 0);
+        if (pred.isJoker) pts *= 2;
+        return pts;
+      };
+
+      const pointsChallenger = calcPointsForPred(d.challengerId);
+      const pointsChallenged = calcPointsForPred(d.challengedId);
+
+      let winnerId: string;
+      if (pointsChallenger > pointsChallenged) winnerId = d.challengerId;
+      else if (pointsChallenger < pointsChallenged) winnerId = d.challengedId;
+      else winnerId = 'draw';
+
+      const challengerName = finalRecalculatedUsers.find(u => u.id === d.challengerId)?.name || 'Retador';
+      const challengedName = finalRecalculatedUsers.find(u => u.id === d.challengedId)?.name || 'Retado';
+      const teamAName = TEAMS[match.teamA]?.name || match.teamA;
+      const teamBName = TEAMS[match.teamB]?.name || match.teamB;
+
+      if (winnerId === 'draw') {
+        injectSystemChatMessage(
+          finalRecalculatedUsers.find(u => u.id === d.challengerId)?.groupId || '',
+          `🤝 [Duelo] Empate entre ${challengerName} (${pointsChallenger} pts) y ${challengedName} (${pointsChallenged} pts) en el partido ${teamAName} vs ${teamBName}.`
+        );
+      } else {
+        const winnerName = winnerId === d.challengerId ? challengerName : challengedName;
+        const loserName = winnerId === d.challengerId ? challengedName : challengerName;
+        const winnerPts = winnerId === d.challengerId ? pointsChallenger : pointsChallenged;
+        const loserPts = winnerId === d.challengerId ? pointsChallenged : pointsChallenger;
+        injectSystemChatMessage(
+          finalRecalculatedUsers.find(u => u.id === d.challengerId)?.groupId || '',
+          `🏆 [Duelo] ¡${winnerName} (${winnerPts} Pts) venció a ${loserName} (${loserPts} Pts) en el partido ${teamAName} vs ${teamBName}! ⚔️`
+        );
+      }
+
+      return {
+        ...d,
+        status: 'completed',
+        winnerId
+      } as Duel;
+    });
+
+    if (duelsUpdated) {
+      setDuels(resolvedDuels);
+      dataService.saveDuels(resolvedDuels);
+    }
 
     if (triggerMatchId) {
       const match = updatedMatchesList.find(m => m.id === triggerMatchId);
@@ -756,6 +837,81 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const createDuel = (challengedId: string, matchId: string): { success: boolean; error?: string } => {
+    if (!currentUser) return { success: false, error: 'Inicia sesión para crear un duelo.' };
+    if (currentUser.id === challengedId) return { success: false, error: 'No puedes desafiarte a ti mismo.' };
+
+    const matchObj = matches.find(m => m.id === matchId);
+    if (!matchObj) return { success: false, error: 'Partido no encontrado.' };
+
+    const matchKickoff = new Date(matchObj.date).getTime();
+    const systemTime = getSystemTime().getTime();
+    if (matchKickoff - systemTime <= 60 * 60 * 1000) {
+      return { success: false, error: 'El partido cierra en menos de una hora o ya empezó.' };
+    }
+
+    const existing = duels.find(d => 
+      ((d.challengerId === currentUser.id && d.challengedId === challengedId) ||
+       (d.challengerId === challengedId && d.challengedId === currentUser.id)) &&
+      d.matchId === matchId && d.status !== 'declined'
+    );
+    if (existing) return { success: false, error: 'Ya existe un duelo pendiente o activo con este jugador para este partido.' };
+
+    const newDuel: Duel = {
+      id: `D-${Date.now()}`,
+      matchId,
+      challengerId: currentUser.id,
+      challengedId,
+      status: 'pending',
+      timestamp: getSystemTime().toISOString()
+    };
+
+    const updated = [...duels, newDuel];
+    setDuels(updated);
+    dataService.saveDuels(updated);
+
+    const challengedName = users.find(u => u.id === challengedId)?.name || 'Rival';
+    const teamAName = TEAMS[matchObj.teamA]?.name || matchObj.teamA;
+    const teamBName = TEAMS[matchObj.teamB]?.name || matchObj.teamB;
+    injectSystemChatMessage(currentUser.groupId, `⚔️ [Duelo] ¡${currentUser.name} ha desafiado a ${challengedName} en el partido ${teamAName} vs ${teamBName}!`);
+
+    return { success: true };
+  };
+
+  const respondToDuel = (duelId: string, action: 'accept' | 'decline') => {
+    const updated = duels.map(d => {
+      if (d.id !== duelId) return d;
+      
+      const matchObj = matches.find(m => m.id === d.matchId);
+      const teamAName = TEAMS[matchObj?.teamA || '']?.name || 'Local';
+      const teamBName = TEAMS[matchObj?.teamB || '']?.name || 'Visitante';
+      const challengerName = users.find(u => u.id === d.challengerId)?.name || 'Retador';
+      const challengedName = users.find(u => u.id === d.challengedId)?.name || 'Retado';
+
+      const groupOfDuel = users.find(u => u.id === d.challengerId)?.groupId || currentUser?.groupId || '';
+      if (action === 'accept') {
+        injectSystemChatMessage(groupOfDuel, `⚔️ [Duelo] ¡${challengedName} aceptó el desafío de ${challengerName} en el partido ${teamAName} vs ${teamBName}! ¡Que gane el mejor! ⚽🔥`);
+        return { ...d, status: 'accepted' } as Duel;
+      } else {
+        injectSystemChatMessage(groupOfDuel, `🏳️ [Duelo] ${challengedName} arrugó y rechazó el desafío de ${challengerName} en el partido ${teamAName} vs ${teamBName}. 😜`);
+        return { ...d, status: 'declined' } as Duel;
+      }
+    });
+
+    setDuels(updated);
+    dataService.saveDuels(updated);
+  };
+
+  const saveUserJersey = (jersey: User['jersey']) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, jersey };
+    setCurrentUser(updatedUser);
+
+    const updatedUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
+    setUsers(updatedUsers);
+    dataService.saveUsers(updatedUsers);
+  };
+
   const clearRecentAchievement = () => {
     setRecentAchievementUnlocked(null);
   };
@@ -775,6 +931,7 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         predictions,
         chatMessages,
         systemState,
+        duels,
         login,
         logout,
         registerWithInvite,
@@ -789,7 +946,10 @@ export const ProdeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         recentAchievementUnlocked,
         clearRecentAchievement,
         liveSimulatedScores,
-        setLiveSimulatedScores
+        setLiveSimulatedScores,
+        createDuel,
+        respondToDuel,
+        saveUserJersey
       }}
     >
       {children}
